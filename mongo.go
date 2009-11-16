@@ -69,6 +69,14 @@ func (c *Connection) writeMessage(m message) os.Error {
 	return err;
 }
 
+func (c *Connection) readReply() (*replyMsg, os.Error) {
+	size_bits, _ := io.ReadAll(io.LimitReader(c.conn, 4));
+	size := binary.LittleEndian.Uint32(size_bits);
+	rest, _ := io.ReadAll(io.LimitReader(c.conn, int64(size)-4));
+	reply := ParseReply(rest);
+	return reply, nil;
+}
+
 type Database struct {
 	conn	*Connection;
 	name	string;
@@ -89,15 +97,9 @@ func (db *Database) GetCollection(name string) *Collection {
 
 func (c *Collection) fullName() string	{ return c.db.name + "." + c.name }
 
-func (c *Collection) Insert(doc BSON) {
+func (c *Collection) Insert(doc BSON) os.Error {
 	im := &insertMsg{c.fullName(), doc, rand.Int31()};
-
-	err := c.db.conn.writeMessage(im);
-
-	if err != nil {
-		fmt.Printf("Error inserting: %v\n", err);
-		os.Exit(1);
-	}
+	return c.db.conn.writeMessage(im);
 }
 
 func (coll *Collection) Query(query BSON) (*vector.Vector, os.Error) {
@@ -110,18 +112,9 @@ func (coll *Collection) Query(query BSON) (*vector.Vector, os.Error) {
 		return nil, err
 	}
 
-	size_bits, _ := io.ReadAll(io.LimitReader(conn.conn, 4));
-	size := binary.LittleEndian.Uint32(size_bits);
-
-	rest, _ := io.ReadAll(io.LimitReader(conn.conn, int64(size)-4));
-	resp_id := int32(binary.LittleEndian.Uint32(rest[4:8]));
-	if resp_id != req_id {
-		return nil, os.NewError("fail")
-	}
-
-	reply := ParseReply(rest[12:len(rest)]);
-	if reply.numberReturned == 0 {
-		return nil, os.NewError("0 returned")
+	reply, err := conn.readReply();
+	if err != nil {
+		return nil, err
 	}
 
 	return reply.docs, nil;
@@ -177,6 +170,7 @@ func (db *Database) GetCollectionNames() *vector.StringVector {
 }
 
 type replyMsg struct {
+	responseTo	int32;
 	responseFlag	int32;
 	cursorID	int64;
 	startingFrom	int32;
@@ -186,13 +180,14 @@ type replyMsg struct {
 
 func ParseReply(b []byte) *replyMsg {
 	r := new(replyMsg);
-	r.responseFlag = int32(binary.LittleEndian.Uint32(b[0:4]));
-	r.cursorID = int64(binary.LittleEndian.Uint64(b[4:12]));
-	r.startingFrom = int32(binary.LittleEndian.Uint32(b[12:16]));
-	r.numberReturned = int32(binary.LittleEndian.Uint32(b[16:20]));
+	r.responseTo = int32(binary.LittleEndian.Uint32(b[4:8]));
+	r.responseFlag = int32(binary.LittleEndian.Uint32(b[12:16]));
+	r.cursorID = int64(binary.LittleEndian.Uint64(b[16:24]));
+	r.startingFrom = int32(binary.LittleEndian.Uint32(b[24:28]));
+	r.numberReturned = int32(binary.LittleEndian.Uint32(b[28:32]));
 	r.docs = vector.New(0);
 
-	buf := bytes.NewBuffer(b[24:len(b)]);
+	buf := bytes.NewBuffer(b[36:len(b)]);
 	for i := 0; int32(i) < r.numberReturned; i++ {
 		var bson BSON;
 		bb := new(_BSONBuilder);
