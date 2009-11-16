@@ -1,8 +1,8 @@
-// Copyright 2009 Michael Stephens. All rights reserved.
+// Based on the Go json package.
+// Original Copyright 2009 The Go Authors. All rights reserved.
+// Modifications Copyright 2009 Michael Stephens.
 // Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
-// Heavily borrowed from Go's standard json package
+// license that can be found in the LICENSE and LICENSE.GO files.
 
 package mongo
 
