@@ -95,6 +95,56 @@ func (db *Database) GetCollection(name string) *Collection {
 	return &Collection{db, name}
 }
 
+type Cursor struct {
+	collection	*Collection;
+	id		int64;
+	pos		int;
+	docs		*vector.Vector;
+}
+
+func (c *Cursor) HasMore() bool {
+	if c.pos < c.docs.Len() {
+		return true
+	}
+
+	err := c.GetMore();
+	if err != nil {
+		return false
+	}
+
+	return c.pos < c.docs.Len();
+}
+
+func (c *Cursor) GetNext() (BSON, os.Error) {
+	if c.HasMore() {
+		return c.docs.At(c.pos).(BSON), nil
+	}
+	return Null, os.NewError("cursor failure");
+}
+
+func (c *Cursor) GetMore() os.Error {
+	if c.id == 0 {
+		return os.NewError("no cursorID")
+	}
+
+	gm := &getMoreMsg{c.collection.fullName(), 0, c.id, rand.Int31()};
+	conn := c.collection.db.conn;
+	err := conn.writeMessage(gm);
+	if err != nil {
+		return err
+	}
+
+	reply, err := conn.readReply();
+	if err != nil {
+		return err
+	}
+
+	c.pos = 0;
+	c.docs = reply.docs;
+
+	return nil;
+}
+
 func (c *Collection) fullName() string	{ return c.db.name + "." + c.name }
 
 func (c *Collection) Insert(doc BSON) os.Error {
@@ -102,7 +152,7 @@ func (c *Collection) Insert(doc BSON) os.Error {
 	return c.db.conn.writeMessage(im);
 }
 
-func (coll *Collection) Query(query BSON) (*vector.Vector, os.Error) {
+func (coll *Collection) Query(query BSON) (*Cursor, os.Error) {
 	req_id := rand.Int31();
 	qm := &queryMsg{0, coll.fullName(), 0, 0, query, req_id};
 
@@ -117,7 +167,7 @@ func (coll *Collection) Query(query BSON) (*vector.Vector, os.Error) {
 		return nil, err
 	}
 
-	return reply.docs, nil;
+	return &Cursor{coll, reply.cursorID, 0, reply.docs}, nil;
 }
 
 type queryMsg struct {
@@ -162,6 +212,31 @@ func (i *insertMsg) Bytes() []byte {
 	buf.WriteString(i.fullCollectionName);
 	buf.WriteByte(0);
 	buf.Write(i.doc.Bytes());
+	return buf.Bytes();
+}
+
+type getMoreMsg struct {
+	fullCollectionName	string;
+	numberToReturn		int32;
+	cursorID		int64;
+	requestID		int32;
+}
+
+func (g *getMoreMsg) OpCode() int32	{ return OP_GET_MORE }
+func (g *getMoreMsg) RequestID() int32	{ return g.requestID }
+func (g *getMoreMsg) Bytes() []byte {
+	buf := bytes.NewBuffer(make([]byte, 4));
+	buf.WriteString(g.fullCollectionName);
+	buf.WriteByte(0);
+
+	b := make([]byte, 4);
+	binary.LittleEndian.PutUint32(b, uint32(g.numberToReturn));
+	buf.Write(b);
+
+	b = make([]byte, 8);
+	binary.LittleEndian.PutUint64(b, uint64(g.cursorID));
+	buf.Write(b);
+
 	return buf.Bytes();
 }
 

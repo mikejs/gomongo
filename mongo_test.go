@@ -19,5 +19,6 @@ func TestInsert(t *testing.T) {
 		fmt.Printf("Failed: %v\n", err)
 	}
 
-	fmt.Printf("Got %v docs.\n", ret.Len());
+	doc, err := ret.GetNext();
+	fmt.Printf("First doc: %v\n", doc.Kind());
 }
