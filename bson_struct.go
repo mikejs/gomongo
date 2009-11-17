@@ -283,12 +283,19 @@ func Marshal(val interface{}) BSON {
 		return &_Long{v, _Null{}}
 	}
 
+	var sv *reflect.StructValue;
+	switch nv := reflect.NewValue(val).(type) {
+	case *reflect.PtrValue:
+		sv = nv.Elem().(*reflect.StructValue)
+	case *reflect.StructValue:
+		sv = nv
+	}
+
 	o := &_Object{map[string]BSON{}, _Null{}};
-	nv := reflect.NewValue(val).(*reflect.PtrValue).Elem().(*reflect.StructValue);
-	t := nv.Type().(*reflect.StructType);
+	t := sv.Type().(*reflect.StructType);
 	for i := 0; i < t.NumField(); i++ {
 		key := strings.ToLower(t.Field(i).Name);
-		o.value[key] = Marshal(nv.Field(i).Interface());
+		o.value[key] = Marshal(sv.Field(i).Interface());
 	}
 
 	return o;

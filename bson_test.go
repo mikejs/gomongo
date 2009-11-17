@@ -55,9 +55,9 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestMarshal(t *testing.T) {
-	os := &OtherStruct{"i", "e"};
-	os2 := OtherStruct{"", ""};
-	m := mongo.Marshal(os);
-	mongo.Unmarshal(m.Bytes(), &os2);
-	assertTrue(os2.F == "i" && os2.V == "e", "unmarshalling a marshalled struct should return original", t);
+	var es1 ExampleStruct;
+	mongo.Unmarshal(b, &es1);
+	bs1 := mongo.Marshal(&es1);
+	bs2, _ := mongo.BytesToBSON(b);
+	assertTrue(mongo.Equal(bs1, bs2), "unmarshal->marshal", t);
 }
