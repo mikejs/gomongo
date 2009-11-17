@@ -53,3 +53,11 @@ func TestUnmarshal(t *testing.T) {
 	assertTrue(es.Third == "three", "unmarshal string", t);
 	assertTrue(es.Fifth.F == "i" && es.Fifth.V == "e", "unmarshal struct", t);
 }
+
+func TestMarshal(t *testing.T) {
+	os := &OtherStruct{"i", "e"};
+	os2 := OtherStruct{"", ""};
+	m := mongo.Marshal(os);
+	mongo.Unmarshal(m.Bytes(), &os2);
+	assertTrue(os2.F == "i" && os2.V == "e", "unmarshalling a marshalled struct should return original", t);
+}

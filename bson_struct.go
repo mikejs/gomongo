@@ -264,3 +264,32 @@ func Unmarshal(b []byte, val interface{}) (ok bool) {
 	}
 	return true;
 }
+
+func Marshal(val interface{}) BSON {
+	if val == nil {
+		return Null
+	}
+
+	switch v := val.(type) {
+	case float64:
+		return &_Number{v, _Null{}}
+	case string:
+		return &_String{v, _Null{}}
+	case bool:
+		return &_Boolean{v, _Null{}}
+	case int32:
+		return &_Int{v, _Null{}}
+	case int64:
+		return &_Long{v, _Null{}}
+	}
+
+	o := &_Object{map[string]BSON{}, _Null{}};
+	nv := reflect.NewValue(val).(*reflect.PtrValue).Elem().(*reflect.StructValue);
+	t := nv.Type().(*reflect.StructType);
+	for i := 0; i < t.NumField(); i++ {
+		key := strings.ToLower(t.Field(i).Name);
+		o.value[key] = Marshal(nv.Field(i).Interface());
+	}
+
+	return o;
+}
