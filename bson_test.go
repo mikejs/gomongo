@@ -57,7 +57,11 @@ func TestUnmarshal(t *testing.T) {
 func TestMarshal(t *testing.T) {
 	var es1 ExampleStruct;
 	mongo.Unmarshal(b, &es1);
-	bs1 := mongo.Marshal(&es1);
+	bs1, _ := mongo.Marshal(&es1);
 	bs2, _ := mongo.BytesToBSON(b);
 	assertTrue(mongo.Equal(bs1, bs2), "unmarshal->marshal", t);
+
+	m := map[string]string{"f": "i", "v": "e"};
+	bs3, _ := mongo.Marshal(&m);
+	assertTrue(mongo.Equal(bs3, bs2.Get("fifth")), "marshal map", t);
 }

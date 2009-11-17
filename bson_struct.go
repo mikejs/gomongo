@@ -265,38 +265,63 @@ func Unmarshal(b []byte, val interface{}) (ok bool) {
 	return true;
 }
 
-func Marshal(val interface{}) BSON {
+func Marshal(val interface{}) (BSON, bool) {
 	if val == nil {
-		return Null
+		return Null, true
 	}
 
 	switch v := val.(type) {
 	case float64:
-		return &_Number{v, _Null{}}
+		return &_Number{v, _Null{}}, true
 	case string:
-		return &_String{v, _Null{}}
+		return &_String{v, _Null{}}, true
 	case bool:
-		return &_Boolean{v, _Null{}}
+		return &_Boolean{v, _Null{}}, true
 	case int32:
-		return &_Int{v, _Null{}}
+		return &_Int{v, _Null{}}, true
 	case int64:
-		return &_Long{v, _Null{}}
+		return &_Long{v, _Null{}}, true
 	}
 
-	var sv *reflect.StructValue;
+	var value reflect.Value;
 	switch nv := reflect.NewValue(val).(type) {
 	case *reflect.PtrValue:
-		sv = nv.Elem().(*reflect.StructValue)
-	case *reflect.StructValue:
-		sv = nv
+		value = nv.Elem()
+	default:
+		value = nv
 	}
 
 	o := &_Object{map[string]BSON{}, _Null{}};
-	t := sv.Type().(*reflect.StructType);
-	for i := 0; i < t.NumField(); i++ {
-		key := strings.ToLower(t.Field(i).Name);
-		o.value[key] = Marshal(sv.Field(i).Interface());
+
+	switch fv := value.(type) {
+	case *reflect.StructValue:
+		t := fv.Type().(*reflect.StructType);
+		for i := 0; i < t.NumField(); i++ {
+			key := strings.ToLower(t.Field(i).Name);
+			el, ok := Marshal(fv.Field(i).Interface());
+			if !ok || el == nil {
+				return nil, false
+			}
+			o.value[key] = el;
+		}
+	case *reflect.MapValue:
+		mt := fv.Type().(*reflect.MapType);
+		if mt.Key() != reflect.Typeof("") {
+			return nil, false
+		}
+
+		keys := fv.Keys();
+		for _, k := range keys {
+			sk := k.(*reflect.StringValue).Get();
+			el, ok := Marshal(fv.Elem(k).Interface());
+			if !ok || el == nil {
+				return nil, false
+			}
+			o.value[sk] = el;
+		}
+	default:
+		return nil, false
 	}
 
-	return o;
+	return o, true;
 }
