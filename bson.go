@@ -411,7 +411,7 @@ func BytesToBSON(b []byte) (BSON, os.Error) {
 	return bson, err;
 }
 
-func ReadCString(buf *bytes.Buffer) string {
+func readCString(buf *bytes.Buffer) string {
 	out := bytes.NewBuffer([]byte{});
 	var c byte;
 	for c, _ = buf.ReadByte(); c != 0; c, _ = buf.ReadByte() {
@@ -426,7 +426,7 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 	err = nil;
 
 	for kind != EOOKind {
-		name := ReadCString(buf);
+		name := readCString(buf);
 		b2 := builder.Key(name);
 
 		switch kind {
@@ -465,8 +465,8 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 			ui64 := binary.LittleEndian.Uint64(bits);
 			b2.Date(int64(ui64));
 		case RegexKind:
-			regex := ReadCString(buf);
-			options := ReadCString(buf);
+			regex := readCString(buf);
+			options := readCString(buf);
 			b2.Regex(regex, options);
 		case IntKind:
 			bits, _ := io.ReadAll(io.LimitReader(buf, 4));
