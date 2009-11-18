@@ -156,6 +156,11 @@ func (c *Collection) Insert(doc BSON) os.Error {
 	return c.db.conn.writeMessage(im);
 }
 
+func (c *Collection) Remove(selector BSON) os.Error {
+	dm := &deleteMsg{c.fullName(), selector, rand.Int31()};
+	return c.db.conn.writeMessage(dm);
+}
+
 func (coll *Collection) Query(query BSON, skip, limit int) (*Cursor, os.Error) {
 	req_id := rand.Int31();
 	conn := coll.db.conn;
@@ -237,6 +242,25 @@ func (i *insertMsg) Bytes() []byte {
 	buf.WriteByte(0);
 	buf.Write(i.doc.Bytes());
 	return buf.Bytes();
+}
+
+type deleteMsg struct {
+	fullCollectionName	string;
+	selector		BSON;
+	requestID		int32;
+}
+
+func (d *deleteMsg) OpCode() int32	{ return OP_DELETE }
+func (d *deleteMsg) RequestID() int32	{ return d.requestID }
+func (d *deleteMsg) Bytes() []byte {
+	zero := make([]byte, 4);
+	buf := bytes.NewBuffer(zero);
+	buf.WriteString(d.fullCollectionName);
+	buf.WriteByte(0);
+	buf.Write(zero);
+	buf.Write(d.selector.Bytes());
+	return buf.Bytes();
+
 }
 
 type getMoreMsg struct {

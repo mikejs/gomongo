@@ -46,6 +46,11 @@ func TestInsert(t *testing.T) {
 	assertTrue(doc.Get("fourth").Kind() == mongo.ObjectKind, "returned doc has proper 'fourth' element", t);
 	assertTrue(doc.Get("fifth").Get("f").String() == "i" && doc.Get("fifth").Get("v").String() == "e", "returned doc has proper 'fifth' element", t);
 
+	rem, _ := mongo.Marshal(map[string]string{"third": "three"});
+	coll.Remove(rem);
+	doc, err = coll.FindOne(rem);
+	assertTrue(err != nil, "remove", t);
+
 	db.Command(dropColl);
 
 	statusCmd, _ := mongo.Marshal(map[string]float64{"serverStatus": 1});
