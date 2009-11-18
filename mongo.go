@@ -18,15 +18,15 @@ import (
 var last_req int32
 
 const (
-	OP_REPLY	= 1;
-	OP_MSG		= 1000;
-	OP_UPDATE	= 2001;
-	OP_INSERT	= 2002;
-	OP_GET_BY_OID	= 2003;
-	OP_QUERY	= 2004;
-	OP_GET_MORE	= 2005;
-	OP_DELETE	= 2006;
-	OP_KILL_CURSORS	= 2007;
+	_OP_REPLY		= 1;
+	_OP_MSG			= 1000;
+	_OP_UPDATE		= 2001;
+	_OP_INSERT		= 2002;
+	_OP_GET_BY_OID		= 2003;
+	_OP_QUERY		= 2004;
+	_OP_GET_MORE		= 2005;
+	_OP_DELETE		= 2006;
+	_OP_KILL_CURSORS	= 2007;
 )
 
 type message interface {
@@ -264,7 +264,7 @@ type queryMsg struct {
 	requestID		int32;
 }
 
-func (q *queryMsg) OpCode() int32	{ return OP_QUERY }
+func (q *queryMsg) OpCode() int32	{ return _OP_QUERY }
 func (q *queryMsg) RequestID() int32	{ return q.requestID }
 func (q *queryMsg) Bytes() []byte {
 	b := make([]byte, 4);
@@ -290,7 +290,7 @@ type insertMsg struct {
 	requestID		int32;
 }
 
-func (i *insertMsg) OpCode() int32	{ return OP_INSERT }
+func (i *insertMsg) OpCode() int32	{ return _OP_INSERT }
 func (i *insertMsg) RequestID() int32	{ return i.requestID }
 func (i *insertMsg) Bytes() []byte {
 	buf := bytes.NewBuffer(make([]byte, 4));
@@ -306,7 +306,7 @@ type deleteMsg struct {
 	requestID		int32;
 }
 
-func (d *deleteMsg) OpCode() int32	{ return OP_DELETE }
+func (d *deleteMsg) OpCode() int32	{ return _OP_DELETE }
 func (d *deleteMsg) RequestID() int32	{ return d.requestID }
 func (d *deleteMsg) Bytes() []byte {
 	zero := make([]byte, 4);
@@ -326,7 +326,7 @@ type getMoreMsg struct {
 	requestID		int32;
 }
 
-func (g *getMoreMsg) OpCode() int32	{ return OP_GET_MORE }
+func (g *getMoreMsg) OpCode() int32	{ return _OP_GET_MORE }
 func (g *getMoreMsg) RequestID() int32	{ return g.requestID }
 func (g *getMoreMsg) Bytes() []byte {
 	buf := bytes.NewBuffer(make([]byte, 4));
