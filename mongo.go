@@ -156,22 +156,37 @@ func (c *Collection) Insert(doc BSON) os.Error {
 	return c.db.conn.writeMessage(im);
 }
 
-func (coll *Collection) Query(query BSON) (*Cursor, os.Error) {
-	req_id := rand.Int31();
-	qm := &queryMsg{0, coll.fullName(), 0, 0, query, req_id};
-
+func (coll *Collection) query(qm *queryMsg, query BSON) (*replyMsg, os.Error) {
 	conn := coll.db.conn;
 	err := conn.writeMessage(qm);
 	if err != nil {
 		return nil, err
 	}
 
-	reply, err := conn.readReply();
+	return conn.readReply();
+}
+
+func (coll *Collection) Query(query BSON) (*Cursor, os.Error) {
+	req_id := rand.Int31();
+	qm := &queryMsg{0, coll.fullName(), 0, 0, query, req_id};
+	reply, err := coll.query(qm, query);
 	if err != nil {
 		return nil, err
 	}
 
 	return &Cursor{coll, reply.cursorID, 0, reply.docs}, nil;
+}
+
+func (db *Database) Command(cmd BSON) (BSON, os.Error) {
+	req_id := rand.Int31();
+	coll := db.GetCollection("$cmd");
+	qm := &queryMsg{0, coll.fullName(), 0, 1, cmd, req_id};
+	reply, err := coll.query(qm, cmd);
+	if err != nil || reply.numberReturned == 0 {
+		return nil, err
+	}
+
+	return reply.docs.At(0).(BSON), nil;
 }
 
 type queryMsg struct {
@@ -266,15 +281,17 @@ func ParseReply(b []byte) *replyMsg {
 	r.numberReturned = int32(binary.LittleEndian.Uint32(b[28:32]));
 	r.docs = vector.New(0);
 
-	buf := bytes.NewBuffer(b[36:len(b)]);
-	for i := 0; int32(i) < r.numberReturned; i++ {
-		var bson BSON;
-		bb := new(_BSONBuilder);
-		bb.ptr = &bson;
-		bb.Object();
-		Parse(buf, bb);
-		r.docs.Push(bson);
-		io.ReadAll(io.LimitReader(buf, 4));
+	if r.numberReturned > 0 {
+		buf := bytes.NewBuffer(b[36:len(b)]);
+		for i := 0; int32(i) < r.numberReturned; i++ {
+			var bson BSON;
+			bb := new(_BSONBuilder);
+			bb.ptr = &bson;
+			bb.Object();
+			Parse(buf, bb);
+			r.docs.Push(bson);
+			io.ReadAll(io.LimitReader(buf, 4));
+		}
 	}
 
 	return r;
