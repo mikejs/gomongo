@@ -12,6 +12,7 @@ import (
 	"fmt";
 	"os";
 	"bytes";
+	"container/vector";
 )
 
 type structBuilder struct {
@@ -292,10 +293,9 @@ func Marshal(val interface{}) (BSON, os.Error) {
 		value = nv
 	}
 
-	o := &_Object{map[string]BSON{}, _Null{}};
-
 	switch fv := value.(type) {
 	case *reflect.StructValue:
+		o := &_Object{map[string]BSON{}, _Null{}};
 		t := fv.Type().(*reflect.StructType);
 		for i := 0; i < t.NumField(); i++ {
 			key := strings.ToLower(t.Field(i).Name);
@@ -305,7 +305,9 @@ func Marshal(val interface{}) (BSON, os.Error) {
 			}
 			o.value[key] = el;
 		}
+		return o, nil;
 	case *reflect.MapValue:
+		o := &_Object{map[string]BSON{}, _Null{}};
 		mt := fv.Type().(*reflect.MapType);
 		if mt.Key() != reflect.Typeof("") {
 			return nil, os.NewError("can't marshall maps with non-string key types")
@@ -320,9 +322,20 @@ func Marshal(val interface{}) (BSON, os.Error) {
 			}
 			o.value[sk] = el;
 		}
+		return o, nil;
+	case *reflect.SliceValue:
+		a := &_Array{vector.New(0), _Null{}};
+		for i := 0; i < fv.Len(); i++ {
+			el, err := Marshal(fv.Elem(i).Interface());
+			if err != nil {
+				return nil, err
+			}
+			a.value.Push(el);
+		}
+		return a, nil;
 	default:
 		return nil, os.NewError(fmt.Sprintf("don't know how to marshal %v\n", value.Type()))
 	}
 
-	return o, nil;
+	return nil, nil;
 }

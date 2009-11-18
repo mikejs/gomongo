@@ -64,4 +64,9 @@ func TestMarshal(t *testing.T) {
 	m := map[string]string{"f": "i", "v": "e"};
 	bs3, _ := mongo.Marshal(&m);
 	assertTrue(mongo.Equal(bs3, bs2.Get("fifth")), "marshal map", t);
+
+	arr, _ := mongo.Marshal([]int{1, 2, 3});
+	assertTrue(arr.Elem(0).Long() == 1, "array marshal (0)", t);
+	assertTrue(arr.Elem(1).Long() == 2, "array marshal (1)", t);
+	assertTrue(arr.Elem(2).Long() == 3, "array marshal (2)", t);
 }
