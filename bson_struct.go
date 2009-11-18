@@ -9,6 +9,8 @@ package mongo
 import (
 	"reflect";
 	"strings";
+	"fmt";
+	"os";
 	"bytes";
 )
 
@@ -256,31 +258,28 @@ func (b *structBuilder) Key(k string) Builder {
 	return nobuilder;
 }
 
-func Unmarshal(b []byte, val interface{}) (ok bool) {
+func Unmarshal(b []byte, val interface{}) (err os.Error) {
 	sb := &structBuilder{val: reflect.NewValue(val)};
-	ok = Parse(bytes.NewBuffer(b[4:len(b)]), sb);
-	if !ok {
-		return false
-	}
-	return true;
+	err = Parse(bytes.NewBuffer(b[4:len(b)]), sb);
+	return;
 }
 
-func Marshal(val interface{}) (BSON, bool) {
+func Marshal(val interface{}) (BSON, os.Error) {
 	if val == nil {
-		return Null, true
+		return Null, nil
 	}
 
 	switch v := val.(type) {
 	case float64:
-		return &_Number{v, _Null{}}, true
+		return &_Number{v, _Null{}}, nil
 	case string:
-		return &_String{v, _Null{}}, true
+		return &_String{v, _Null{}}, nil
 	case bool:
-		return &_Boolean{v, _Null{}}, true
+		return &_Boolean{v, _Null{}}, nil
 	case int32:
-		return &_Int{v, _Null{}}, true
+		return &_Int{v, _Null{}}, nil
 	case int64:
-		return &_Long{v, _Null{}}, true
+		return &_Long{v, _Null{}}, nil
 	}
 
 	var value reflect.Value;
@@ -298,30 +297,30 @@ func Marshal(val interface{}) (BSON, bool) {
 		t := fv.Type().(*reflect.StructType);
 		for i := 0; i < t.NumField(); i++ {
 			key := strings.ToLower(t.Field(i).Name);
-			el, ok := Marshal(fv.Field(i).Interface());
-			if !ok || el == nil {
-				return nil, false
+			el, err := Marshal(fv.Field(i).Interface());
+			if err != nil {
+				return nil, err
 			}
 			o.value[key] = el;
 		}
 	case *reflect.MapValue:
 		mt := fv.Type().(*reflect.MapType);
 		if mt.Key() != reflect.Typeof("") {
-			return nil, false
+			return nil, os.NewError("can't marshall maps with non-string key types")
 		}
 
 		keys := fv.Keys();
 		for _, k := range keys {
 			sk := k.(*reflect.StringValue).Get();
-			el, ok := Marshal(fv.Elem(k).Interface());
-			if !ok || el == nil {
-				return nil, false
+			el, err := Marshal(fv.Elem(k).Interface());
+			if err != nil {
+				return nil, err
 			}
 			o.value[sk] = el;
 		}
 	default:
-		return nil, false
+		return nil, os.NewError(fmt.Sprintf("don't know how to marshal %v\n", value.Type()))
 	}
 
-	return o, true;
+	return o, nil;
 }

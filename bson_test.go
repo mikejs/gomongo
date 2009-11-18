@@ -33,8 +33,8 @@ type ExampleStruct struct {
 var b []byte = []byte{92, 0, 0, 0, 1, 115, 101, 99, 111, 110, 100, 0, 0, 0, 0, 0, 0, 0, 0, 64, 3, 102, 105, 102, 116, 104, 0, 23, 0, 0, 0, 2, 118, 0, 2, 0, 0, 0, 101, 0, 2, 102, 0, 2, 0, 0, 0, 105, 0, 0, 3, 102, 111, 117, 114, 116, 104, 0, 5, 0, 0, 0, 0, 2, 116, 104, 105, 114, 100, 0, 6, 0, 0, 0, 116, 104, 114, 101, 101, 0, 16, 102, 105, 114, 115, 116, 0, 1, 0, 0, 0, 0}
 
 func TestSerializeAndDeserialize(t *testing.T) {
-	obj, ok := mongo.BytesToBSON(b);
-	assertTrue(ok, fmt.Sprintf("failed parsing %v", b), t);
+	obj, err := mongo.BytesToBSON(b);
+	assertTrue(err == nil, fmt.Sprintf("failed parsing %v", b), t);
 	obj2, _ := mongo.BytesToBSON(obj.Bytes());
 	assertTrue(mongo.Equal(obj, obj2), fmt.Sprintf("obj != obj2 for %v", b), t);
 

@@ -7,7 +7,9 @@
 package mongo
 
 import (
+	"os";
 	"io";
+	"fmt";
 	"math";
 	"bytes";
 	"strconv";
@@ -400,13 +402,13 @@ func (bb *_BSONBuilder) Elem(i int) Builder {
 
 func (bb *_BSONBuilder) Flush()	{}
 
-func BytesToBSON(b []byte) (BSON, bool) {
+func BytesToBSON(b []byte) (BSON, os.Error) {
 	var bson BSON;
 	bb := new(_BSONBuilder);
 	bb.ptr = &bson;
 	bb.Object();
-	Parse(bytes.NewBuffer(b[4:len(b)]), bb);
-	return bson, true;
+	err := Parse(bytes.NewBuffer(b[4:len(b)]), bb);
+	return bson, err;
 }
 
 func ReadCString(buf *bytes.Buffer) string {
@@ -419,9 +421,9 @@ func ReadCString(buf *bytes.Buffer) string {
 	return out.String();
 }
 
-func Parse(buf *bytes.Buffer, builder Builder) (ok bool) {
+func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 	kind, _ := buf.ReadByte();
-	ok = true;
+	err = nil;
 
 	for kind != EOOKind {
 		name := ReadCString(buf);
@@ -443,11 +445,11 @@ func Parse(buf *bytes.Buffer, builder Builder) (ok bool) {
 		case ObjectKind:
 			b2.Object();
 			io.ReadAll(io.LimitReader(buf, 4));
-			ok = Parse(buf, b2);
+			err = Parse(buf, b2);
 		case ArrayKind:
 			b2.Array();
 			io.ReadAll(io.LimitReader(buf, 4));
-			ok = Parse(buf, b2);
+			err = Parse(buf, b2);
 		case OIDKind:
 			oid, _ := io.ReadAll(io.LimitReader(buf, 12));
 			b2.OID(oid);
@@ -475,7 +477,7 @@ func Parse(buf *bytes.Buffer, builder Builder) (ok bool) {
 			ui64 := binary.LittleEndian.Uint64(bits);
 			b2.Int64(int64(ui64));
 		default:
-			ok = false
+			err = os.NewError(fmt.Sprintf("don't know how to handle kind %v yet", kind))
 		}
 
 		kind, _ = buf.ReadByte();
