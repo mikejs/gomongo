@@ -280,6 +280,8 @@ func Marshal(val interface{}) (BSON, os.Error) {
 		return &_Int{v, _Null{}}, nil
 	case int64:
 		return &_Long{v, _Null{}}, nil
+	case int:
+		return &_Long{int64(v), _Null{}}, nil
 	}
 
 	var value reflect.Value;

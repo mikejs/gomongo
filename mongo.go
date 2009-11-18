@@ -90,6 +90,22 @@ func (c *Connection) GetDB(name string) *Database {
 	return &Database{c, name}
 }
 
+func (db *Database) Drop() os.Error {
+	cmd, err := Marshal(map[string]int{"dropDatabase": 1});
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Command(cmd);
+	return err;
+}
+
+func (db *Database) Repair(preserveClonedFilesOnFailure, backupOriginalFiles bool) os.Error {
+	cmd := &_Object{map[string]BSON{"repairDatabase": &_Number{1, _Null{}}, "preserveClonedFilesOnFailure": &_Boolean{preserveClonedFilesOnFailure, _Null{}}, "backupOriginalFiles": &_Boolean{backupOriginalFiles, _Null{}}}, _Null{}};
+	_, err := db.Command(cmd);
+	return err;
+}
+
 type Collection struct {
 	db	*Database;
 	name	string;
@@ -150,6 +166,46 @@ func (c *Cursor) GetMore() os.Error {
 }
 
 func (c *Collection) fullName() string	{ return c.db.name + "." + c.name }
+
+type indexDesc struct {
+	Name	string;
+	Ns	string;
+	Key	map[string]int;
+}
+
+func (c *Collection) EnsureIndex(name string, index map[string]int) os.Error {
+	coll := c.db.GetCollection("system.indexes");
+	id := &indexDesc{name, c.fullName(), index};
+	desc, err := Marshal(id);
+	if err != nil {
+		return err
+	}
+	return coll.Insert(desc);
+}
+
+func (c *Collection) DropIndexes() os.Error	{ return c.DropIndex("*") }
+
+func (c *Collection) DropIndex(name string) os.Error {
+	cmdm := map[string]string{"deleteIndexes": c.fullName(), "index": name};
+	cmd, err := Marshal(cmdm);
+	if err != nil {
+		return err
+	}
+
+	_, err = c.db.Command(cmd);
+	return err;
+}
+
+func (c *Collection) Drop() os.Error {
+	cmdm := map[string]string{"drop": c.fullName()};
+	cmd, err := Marshal(cmdm);
+	if err != nil {
+		return err
+	}
+
+	_, err = c.db.Command(cmd);
+	return err;
+}
 
 func (c *Collection) Insert(doc BSON) os.Error {
 	im := &insertMsg{c.fullName(), doc, rand.Int31()};

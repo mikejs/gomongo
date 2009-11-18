@@ -26,12 +26,10 @@ func TestInsert(t *testing.T) {
 	conn, err := mongo.Connect("127.0.0.1", 27017);
 	assertTrue(err == nil && conn != nil, fmt.Sprintf("failed connecting to mongo: %v", err), t);
 
-	dropColl, _ := mongo.Marshal(map[string]string{"drop": "coll"});
-
 	db := conn.GetDB("go_driver_tests");
-	db.Command(dropColl);
-
 	coll := db.GetCollection("coll");
+	coll.Drop();
+
 	coll.Insert(obj);
 
 	q, _ := mongo.Marshal(map[string]string{});
@@ -51,9 +49,11 @@ func TestInsert(t *testing.T) {
 	doc, err = coll.FindOne(rem);
 	assertTrue(err != nil, "remove", t);
 
-	db.Command(dropColl);
+	coll.Drop();
 
 	statusCmd, _ := mongo.Marshal(map[string]float64{"serverStatus": 1});
 	status, _ := db.Command(statusCmd);
 	assertTrue(status.Get("uptime").Number() != 0, "valid serverStatus", t);
+
+	db.Drop();
 }
