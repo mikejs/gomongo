@@ -27,9 +27,11 @@ func TestInsert(t *testing.T) {
 	assertTrue(err == nil && conn != nil, fmt.Sprintf("failed connecting to mongo: %v", err), t);
 
 	dropColl, _ := mongo.Marshal(map[string]string{"drop": "coll"});
-	conn.GetDB("test").Command(dropColl);
 
-	coll := conn.GetDB("test").GetCollection("coll");
+	db := conn.GetDB("go_driver_tests");
+	db.Command(dropColl);
+
+	coll := db.GetCollection("coll");
 	coll.Insert(obj);
 
 	q, _ := mongo.Marshal(map[string]string{});
@@ -44,9 +46,9 @@ func TestInsert(t *testing.T) {
 	assertTrue(doc.Get("fourth").Kind() == mongo.ObjectKind, "returned doc has proper 'fourth' element", t);
 	assertTrue(doc.Get("fifth").Get("f").String() == "i" && doc.Get("fifth").Get("v").String() == "e", "returned doc has proper 'fifth' element", t);
 
-	conn.GetDB("test").Command(dropColl);
+	db.Command(dropColl);
 
 	statusCmd, _ := mongo.Marshal(map[string]float64{"serverStatus": 1});
-	status, _ := conn.GetDB("test").Command(statusCmd);
+	status, _ := db.Command(statusCmd);
 	assertTrue(status.Get("uptime").Number() != 0, "valid serverStatus", t);
 }
