@@ -77,7 +77,7 @@ func (c *Connection) readReply() (*replyMsg, os.Error) {
 	size_bits, _ := io.ReadAll(io.LimitReader(c.conn, 4));
 	size := binary.LittleEndian.Uint32(size_bits);
 	rest, _ := io.ReadAll(io.LimitReader(c.conn, int64(size)-4));
-	reply := ParseReply(rest);
+	reply := parseReply(rest);
 	return reply, nil;
 }
 
@@ -357,7 +357,7 @@ type replyMsg struct {
 	docs		*vector.Vector;
 }
 
-func ParseReply(b []byte) *replyMsg {
+func parseReply(b []byte) *replyMsg {
 	r := new(replyMsg);
 	r.responseTo = int32(binary.LittleEndian.Uint32(b[4:8]));
 	r.responseFlag = int32(binary.LittleEndian.Uint32(b[12:16]));
