@@ -1,0 +1,14 @@
+Example usage:
+
+import "mongo"
+
+doc, _ := mongo.Marshal(map[string]string{"_id": "doc1", "title": "A Mongo document", "content": "Testing, 1. 2. 3."});
+conn, _ := mongo.Connect("127.0.0.1", 27017);
+collection := conn.GetDB("test").GetCollection("test_collection");
+collection.Insert(doc);
+
+query, _ := mongo.Marshal(map[string]string{"_id": "doc1"});
+got, _ := collection.FindOne(query);
+mongo.Equal(doc, got);  // true!
+
+collection.Drop();
