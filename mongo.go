@@ -156,37 +156,42 @@ func (c *Collection) Insert(doc BSON) os.Error {
 	return c.db.conn.writeMessage(im);
 }
 
-func (coll *Collection) query(qm *queryMsg, query BSON) (*replyMsg, os.Error) {
+func (coll *Collection) Query(query BSON, skip, limit int) (*Cursor, os.Error) {
+	req_id := rand.Int31();
 	conn := coll.db.conn;
+	qm := &queryMsg{0, coll.fullName(), int32(skip), int32(limit), query, req_id};
+
 	err := conn.writeMessage(qm);
 	if err != nil {
 		return nil, err
 	}
 
-	return conn.readReply();
-}
-
-func (coll *Collection) Query(query BSON) (*Cursor, os.Error) {
-	req_id := rand.Int31();
-	qm := &queryMsg{0, coll.fullName(), 0, 0, query, req_id};
-	reply, err := coll.query(qm, query);
+	reply, err := conn.readReply();
 	if err != nil {
 		return nil, err
+	}
+	if reply.responseTo != req_id {
+		return nil, os.NewError("wrong responseTo code")
 	}
 
 	return &Cursor{coll, reply.cursorID, 0, reply.docs}, nil;
 }
 
-func (db *Database) Command(cmd BSON) (BSON, os.Error) {
-	req_id := rand.Int31();
-	coll := db.GetCollection("$cmd");
-	qm := &queryMsg{0, coll.fullName(), 0, 1, cmd, req_id};
-	reply, err := coll.query(qm, cmd);
-	if err != nil || reply.numberReturned == 0 {
+func (coll *Collection) FindAll(query BSON) (*Cursor, os.Error) {
+	return coll.Query(query, 0, 0)
+}
+
+func (coll *Collection) FindOne(query BSON) (BSON, os.Error) {
+	cursor, err := coll.Query(query, 0, 1);
+	if err != nil {
 		return nil, err
 	}
+	return cursor.GetNext();
+}
 
-	return reply.docs.At(0).(BSON), nil;
+func (db *Database) Command(cmd BSON) (BSON, os.Error) {
+	coll := db.GetCollection("$cmd");
+	return coll.FindOne(cmd);
 }
 
 type queryMsg struct {

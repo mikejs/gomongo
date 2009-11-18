@@ -35,7 +35,7 @@ func TestInsert(t *testing.T) {
 	coll.Insert(obj);
 
 	q, _ := mongo.Marshal(map[string]string{});
-	ret, err := coll.Query(q);
+	ret, err := coll.FindAll(q);
 	assertTrue(err == nil && ret != nil, "query succeeded", t);
 
 	doc, _ := ret.GetNext();
