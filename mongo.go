@@ -165,6 +165,18 @@ func (c *Cursor) GetMore() os.Error {
 	return nil;
 }
 
+func (c *Cursor) Close() os.Error {
+	if c.id == 0 {
+		// not open on server
+		return nil
+	}
+
+	req_id := rand.Int31();
+	km := &killMsg{1, []int64{c.id}, req_id};
+	conn := c.collection.db.conn;
+	return conn.writeMessage(km);
+}
+
 func (c *Collection) fullName() string	{ return c.db.name + "." + c.name }
 
 type indexDesc struct {
@@ -424,6 +436,30 @@ func (u *updateMsg) Bytes() []byte {
 
 	buf.Write(u.selector.Bytes());
 	buf.Write(u.document.Bytes());
+
+	return buf.Bytes();
+}
+
+type killMsg struct {
+	numberOfCursorIDs	int32;
+	cursorIDs		[]int64;
+	requestID		int32;
+}
+
+func (k *killMsg) OpCode() int32	{ return _OP_KILL_CURSORS }
+func (k *killMsg) RequestID() int32	{ return k.requestID }
+func (k *killMsg) Bytes() []byte {
+	buf := bytes.NewBuffer(make([]byte, 4));
+
+	b := make([]byte, 4);
+	binary.LittleEndian.PutUint32(b, uint32(k.numberOfCursorIDs));
+	buf.Write(b);
+
+	b = make([]byte, 8);
+	for _, id := range k.cursorIDs {
+		binary.LittleEndian.PutUint64(b, uint64(id));
+		buf.Write(b);
+	}
 
 	return buf.Bytes();
 }
