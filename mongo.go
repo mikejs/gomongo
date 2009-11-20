@@ -250,6 +250,28 @@ func (coll *Collection) FindOne(query BSON) (BSON, os.Error) {
 	return cursor.GetNext();
 }
 
+func (coll *Collection) update(um *updateMsg) os.Error {
+	um.requestID = rand.Int31();
+	conn := coll.db.conn;
+	return conn.writeMessage(um);
+}
+
+func (coll *Collection) Update(selector, document BSON) os.Error {
+	return coll.update(&updateMsg{coll.fullName(), 0, selector, document, 0})
+}
+
+func (coll *Collection) Upsert(selector, document BSON) os.Error {
+	return coll.update(&updateMsg{coll.fullName(), 1, selector, document, 0})
+}
+
+func (coll *Collection) UpdateAll(selector, document BSON) os.Error {
+	return coll.update(&updateMsg{coll.fullName(), 2, selector, document, 0})
+}
+
+func (coll *Collection) UpsertAll(selector, document BSON) os.Error {
+	return coll.update(&updateMsg{coll.fullName(), 3, selector, document, 0})
+}
+
 func (db *Database) Command(cmd BSON) (BSON, os.Error) {
 	coll := db.GetCollection("$cmd");
 	return coll.FindOne(cmd);
@@ -380,4 +402,28 @@ func parseReply(b []byte) *replyMsg {
 	}
 
 	return r;
+}
+
+type updateMsg struct {
+	fullCollectionName	string;
+	flags			int32;
+	selector, document	BSON;
+	requestID		int32;
+}
+
+func (u *updateMsg) OpCode() int32	{ return _OP_UPDATE }
+func (u *updateMsg) RequestID() int32	{ return u.requestID }
+func (u *updateMsg) Bytes() []byte {
+	buf := bytes.NewBuffer(make([]byte, 4));
+	buf.WriteString(u.fullCollectionName);
+	buf.WriteByte(0);
+
+	b := make([]byte, 4);
+	binary.LittleEndian.PutUint32(b, uint32(u.flags));
+	buf.Write(b);
+
+	buf.Write(u.selector.Bytes());
+	buf.Write(u.document.Bytes());
+
+	return buf.Bytes();
 }
