@@ -8,6 +8,7 @@ import (
 	"mongo";
 	"testing";
 	"fmt";
+	"time";
 )
 
 type KeyStruct struct {
@@ -64,4 +65,203 @@ func TestStuff(t *testing.T) {
 	assertTrue(status.Get("uptime").Number() != 0, "valid serverStatus", t);
 
 	db.Drop();
+}
+
+func TestOtherStuff(t *testing.T) {
+	doc, _ := mongo.Marshal(map[string]string{"_id": "doc1", "title": "A Mongo document", "content": "Testing, 1. 2. 3."});
+	conn, _ := mongo.Connect("127.0.0.1", 27017);
+	collection := conn.GetDB("test").GetCollection("test_collection");
+	collection.Insert(doc);
+
+	query, _ := mongo.Marshal(map[string]string{"_id": "doc1"});
+	got, _ := collection.FindOne(query);
+	assertTrue(mongo.Equal(doc, got), "equal", t);
+
+}
+
+const (
+	PER_TRIAL	= 1000;
+	BATCH_SIZE	= 100;
+)
+
+func timeIt(s string, f func(*mongo.Collection, *testing.T), coll *mongo.Collection, t *testing.T) {
+	start := time.Nanoseconds();
+	f(coll, t);
+	end := time.Nanoseconds();
+	diff := end - start;
+	ops := (PER_TRIAL / float64(diff)) * 1000000000.0;
+	secs := float64(diff) / 1000000000.0;
+	t.Logf("%v: %v secs, %v OPS", s, secs, ops);
+}
+
+func TestBenchmark(t *testing.T) {
+	conn, err := mongo.Connect("127.0.0.1", 27017);
+	if err != nil {
+		t.Error("failed connecting")
+	}
+
+	db := conn.GetDB("perf_test");
+	db.Drop();
+	db.GetCollection("creation").Insert(mongo.EmptyObject);
+	db.GetCollection("creation").Count(mongo.EmptyObject);
+
+	timeIt("single.small Insert", singleInsertSmall, db.GetCollection("single.small"), t);
+	timeIt("single.medium Insert", singleInsertMedium, db.GetCollection("single.medium"), t);
+	timeIt("single.large Insert", singleInsertLarge, db.GetCollection("single.large"), t);
+	timeIt("single.small FindOne", findOneSmall, db.GetCollection("single.small"), t);
+	timeIt("single.medium FindOne", findOneMedium, db.GetCollection("single.medium"), t);
+	timeIt("single.large FindOne", findOne, db.GetCollection("single.large"), t);
+
+	t.Log("---");
+	db.GetCollection("single.small.indexed").EnsureIndex("my_index1", map[string]int{"x": 1});
+	timeIt("single.small.indexed Insert", singleInsertSmall, db.GetCollection("single.small.indexed"), t);
+
+	db.GetCollection("single.medium.indexed").EnsureIndex("my_index2", map[string]int{"x": 1});
+	timeIt("single.medium.indexed Insert", singleInsertMedium, db.GetCollection("single.medium.indexed"), t);
+
+	db.GetCollection("single.large.indexed").EnsureIndex("my_index3", map[string]int{"x": 1});
+	timeIt("single.large.indexed Insert", singleInsertLarge, db.GetCollection("single.large.indexed"), t);
+
+	timeIt("single.small.indexed FindOne", findOneSmall, db.GetCollection("single.small.indexed"), t);
+	timeIt("single.medium.indexed FindOne", findOneMedium, db.GetCollection("single.medium.indexed"), t);
+	timeIt("single.large.indexed FindOne", findOne, db.GetCollection("single.large.indexed"), t);
+}
+
+type smallStruct struct {
+	X int;
+}
+
+func singleInsertSmall(coll *mongo.Collection, t *testing.T) {
+	ss := &smallStruct{0};
+	for i := 0; i < PER_TRIAL; i++ {
+		ss.X = i;
+		obj, err := mongo.Marshal(ss);
+		if err != nil {
+			t.Errorf("singleInsertSmall Marshal: %v\n", err)
+		}
+
+		err = coll.Insert(obj);
+		if err != nil {
+			t.Errorf("singleInsertSmall Insert: %v\n", err)
+		}
+	}
+}
+
+func findOneSmall(coll *mongo.Collection, t *testing.T) {
+	ss := &smallStruct{PER_TRIAL / 2};
+	obj, err := mongo.Marshal(ss);
+	if err != nil {
+		t.Errorf("findOneSmall Marshal: %v\n", err)
+	}
+
+	for i := 0; i < PER_TRIAL; i++ {
+		_, err = coll.FindOne(obj);
+		if err != nil {
+			t.Errorf("findOneSmall FindOne: %v\n", err)
+		}
+	}
+}
+
+type mediumStruct struct {
+	Integer	int;
+	Number	float64;
+	Boolean	bool;
+	Array	[]string;
+	X	int;
+}
+
+func singleInsertMedium(coll *mongo.Collection, t *testing.T) {
+	ms := &mediumStruct{5, 5.05, false, []string{"test", "benchmark"}, 0};
+	for i := 0; i < PER_TRIAL; i++ {
+		ms.X = i;
+		obj, err := mongo.Marshal(ms);
+		if err != nil {
+			t.Errorf("singleInsertMedium Marshal: %v\n", err)
+		}
+
+		err = coll.Insert(obj);
+		if err != nil {
+			t.Errorf("singleInsertMedium Insert: %v\n", err)
+		}
+	}
+}
+
+func findOneMedium(coll *mongo.Collection, t *testing.T) {
+	ss := &smallStruct{PER_TRIAL / 2};
+	obj, err := mongo.Marshal(ss);
+	if err != nil {
+		t.Errorf("findOneMedium Marshal: %v\n", err)
+	}
+
+	for i := 0; i < PER_TRIAL; i++ {
+		_, err = coll.FindOne(obj);
+		if err != nil {
+			t.Errorf("findOneMedium FindOne: %v\n", err)
+		}
+	}
+}
+
+func findOne(coll *mongo.Collection, t *testing.T) {
+	ss := &smallStruct{PER_TRIAL / 2};
+	obj, err := mongo.Marshal(ss);
+	if err != nil {
+		t.Errorf("findOne Marshal: %v\n", err)
+	}
+
+	for i := 0; i < PER_TRIAL; i++ {
+		_, err = coll.FindOne(obj);
+		if err != nil {
+			t.Errorf("findOne FindOne: %v\n", err)
+		}
+	}
+}
+
+type largeStruct struct {
+	Base_url		string;
+	Total_word_count	int;
+	Access_time		*time.Time;
+	Meta_tags		map[string]string;
+	Page_structure		map[string]int;
+	Harvested_words		[]string;
+	X			int;
+}
+
+func singleInsertLarge(coll *mongo.Collection, t *testing.T) {
+	base_words := []string{"10gen", "web", "open", "source", "application", "paas",
+		"platform-as-a-service", "technology", "helps",
+		"developers", "focus", "building", "mongodb", "mongo",
+	};
+
+	words := make([]string, 280);
+	for i := 0; i < 20; i++ {
+		for k, word := range base_words {
+			words[i+k] = word
+		}
+	}
+
+	ls := &largeStruct{"http://www.example.com/test-me",
+		6743, time.UTC(),
+		map[string]string{"description": "i am a long description string",
+			"author": "Holly Man",
+			"dynamically_created_meta_tag": "who know\n what",
+		},
+		map[string]int{"counted_tags": 3450,
+			"no_of_js_attached": 10,
+			"no_of_images": 6,
+		},
+		words, 0,
+	};
+
+	for i := 0; i < PER_TRIAL; i++ {
+		ls.X = i;
+		obj, err := mongo.Marshal(ls);
+		if err != nil {
+			t.Errorf("singleInsertLarge Marshal: %v", err)
+		}
+
+		err = coll.Insert(obj);
+		if err != nil {
+			t.Errorf("singleInsertLarge Insert: %v", err)
+		}
+	}
 }
