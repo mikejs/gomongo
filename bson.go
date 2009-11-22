@@ -386,9 +386,20 @@ func (bb *_BSONBuilder) OID(o []byte)	{ bb.Put(&_OID{o, _Null{}}) }
 
 func (bb *_BSONBuilder) Key(key string) Builder {
 	bb2 := new(_BSONBuilder);
-	bb2.obj = bb.Get().(*_Object).value;
-	bb2.key = key;
-	bb2.obj[key] = Null;
+
+	switch obj := bb.Get().(type) {
+	case *_Object:
+		bb2.obj = obj.value;
+		bb2.key = key;
+		bb2.obj[key] = Null;
+	case *_Array:
+		bb2.arr = obj.value;
+		elem, _ := strconv.Atoi(key);
+		bb2.elem = elem;
+		for elem >= bb2.arr.Len() {
+			bb2.arr.Push(Null)
+		}
+	}
 	return bb2;
 }
 
