@@ -146,6 +146,8 @@ func (o *_Object) Bytes() []byte {
 	return bytes.Add(b, buf.Bytes());
 }
 
+var EmptyObject BSON = &_Object{map[string]BSON{}, _Null{}}
+
 type _Array struct {
 	value	*vector.Vector;
 	_Null;
