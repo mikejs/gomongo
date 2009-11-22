@@ -44,6 +44,9 @@ func TestStuff(t *testing.T) {
 	assertTrue(doc.Get("fourth").Kind() == mongo.ObjectKind, "returned doc has proper 'fourth' element", t);
 	assertTrue(doc.Get("fifth").Get("f").String() == "i" && doc.Get("fifth").Get("v").String() == "e", "returned doc has proper 'fifth' element", t);
 
+	count, err := coll.Count(q);
+	assertTrue(count == 1, "count", t);
+
 	newDoc, _ := mongo.Marshal(map[string]string{"first": "one", "second": "two", "third": "three"});
 	coll.Update(q, newDoc);
 	doc, _ = coll.FindOne(q);

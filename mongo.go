@@ -262,6 +262,16 @@ func (coll *Collection) FindOne(query BSON) (BSON, os.Error) {
 	return cursor.GetNext();
 }
 
+func (coll *Collection) Count(query BSON) (int64, os.Error) {
+	cmd := &_Object{map[string]BSON{"count": &_String{coll.name, _Null{}}, "query": query}, _Null{}};
+	reply, err := coll.db.Command(cmd);
+	if err != nil {
+		return -1, err
+	}
+
+	return int64(reply.Get("n").Number()), nil;
+}
+
 func (coll *Collection) update(um *updateMsg) os.Error {
 	um.requestID = rand.Int31();
 	conn := coll.db.conn;
