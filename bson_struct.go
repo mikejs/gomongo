@@ -12,6 +12,7 @@ import (
 	"fmt";
 	"os";
 	"bytes";
+	"time";
 	"container/vector";
 )
 
@@ -92,12 +93,13 @@ func (b *structBuilder) Int64(i int64) {
 	}
 }
 
-func (b *structBuilder) Date(d int64) {
+func (b *structBuilder) Date(t *time.Time) {
 	if b == nil {
 		return
 	}
-	v := b.val;
-	setint(v, d);
+	if v, ok := b.val.(*reflect.PtrValue); ok {
+		v.PointTo(reflect.Indirect(reflect.NewValue(t)))
+	}
 }
 
 func (b *structBuilder) Int32(i int32) {
@@ -283,6 +285,8 @@ func Marshal(val interface{}) (BSON, os.Error) {
 		return &_Long{v, _Null{}}, nil
 	case int:
 		return &_Long{int64(v), _Null{}}, nil
+	case *time.Time:
+		return &_Date{v, _Null{}}, nil
 	}
 
 	var value reflect.Value;

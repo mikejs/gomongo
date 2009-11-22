@@ -8,6 +8,7 @@ import (
 	"testing";
 	"mongo";
 	"fmt";
+	"time";
 )
 
 func assertTrue(tf bool, msg string, t *testing.T) {
@@ -54,6 +55,10 @@ func TestUnmarshal(t *testing.T) {
 	assertTrue(es.Fifth.F == "i" && es.Fifth.V == "e", "unmarshal struct", t);
 }
 
+type ExampleStruct2 struct {
+	Date *time.Time;
+}
+
 func TestMarshal(t *testing.T) {
 	var es1 ExampleStruct;
 	mongo.Unmarshal(b, &es1);
@@ -69,4 +74,12 @@ func TestMarshal(t *testing.T) {
 	assertTrue(arr.Elem(0).Long() == 1, "array marshal (0)", t);
 	assertTrue(arr.Elem(1).Long() == 2, "array marshal (1)", t);
 	assertTrue(arr.Elem(2).Long() == 3, "array marshal (2)", t);
+
+	d := time.UTC();
+	es2 := &ExampleStruct2{d};
+	bs2, _ = mongo.Marshal(es2);
+	assertTrue(bs2.Get("date").Date().Seconds() == d.Seconds(), "date marshal", t);
+	es2 = new(ExampleStruct2);
+	mongo.Unmarshal(bs2.Bytes(), es2);
+	assertTrue(es2.Date.Seconds() == d.Seconds(), "date unmarshal", t);
 }

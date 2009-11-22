@@ -11,6 +11,7 @@ import (
 	"io";
 	"fmt";
 	"math";
+	"time";
 	"bytes";
 	"strconv";
 	"encoding/binary";
@@ -47,7 +48,7 @@ type BSON interface {
 	String() string;
 	OID() []byte;
 	Bool() bool;
-	Date() int64;
+	Date() *time.Time;
 	Regex() (string, string);
 	Int() int32;
 	Long() int64;
@@ -68,7 +69,7 @@ func (*_Null) Number() float64		{ return 0 }
 func (*_Null) String() string		{ return "null" }
 func (*_Null) OID() []byte		{ return nil }
 func (*_Null) Bool() bool		{ return false }
-func (*_Null) Date() int64		{ return 0 }
+func (*_Null) Date() *time.Time		{ return nil }
 func (*_Null) Regex() (string, string)	{ return "", "" }
 func (*_Null) Int() int32		{ return 0 }
 func (*_Null) Long() int64		{ return 0 }
@@ -205,15 +206,16 @@ func (b *_Boolean) Bytes() []byte {
 }
 
 type _Date struct {
-	value	int64;
+	value	*time.Time;
 	_Null;
 }
 
-func (d *_Date) Kind() int	{ return DateKind }
-func (d *_Date) Date() int64	{ return d.value }
+func (d *_Date) Kind() int		{ return DateKind }
+func (d *_Date) Date() *time.Time	{ return d.value }
 func (d *_Date) Bytes() []byte {
 	b := []byte{0, 0, 0, 0, 0, 0, 0, 0};
-	binary.LittleEndian.PutUint64(b, uint64(d.value));
+	mtime := d.value.Seconds() * 1000;
+	binary.LittleEndian.PutUint64(b, uint64(mtime));
 	return b;
 }
 
@@ -320,7 +322,7 @@ type Builder interface {
 	Float64(f float64);
 	String(s string);
 	Bool(b bool);
-	Date(d int64);
+	Date(d *time.Time);
 	OID(o []byte);
 	Regex(regex, options string);
 	Null();
@@ -373,7 +375,7 @@ func (bb *_BSONBuilder) String(s string)	{ bb.Put(&_String{s, _Null{}}) }
 func (bb *_BSONBuilder) Object()		{ bb.Put(&_Object{make(map[string]BSON), _Null{}}) }
 func (bb *_BSONBuilder) Array()			{ bb.Put(&_Array{vector.New(0), _Null{}}) }
 func (bb *_BSONBuilder) Bool(b bool)		{ bb.Put(&_Boolean{b, _Null{}}) }
-func (bb *_BSONBuilder) Date(d int64)		{ bb.Put(&_Date{d, _Null{}}) }
+func (bb *_BSONBuilder) Date(t *time.Time)	{ bb.Put(&_Date{t, _Null{}}) }
 func (bb *_BSONBuilder) Null()			{ bb.Put(Null) }
 func (bb *_BSONBuilder) Regex(regex, options string) {
 	bb.Put(&_Regex{regex, options, _Null{}})
@@ -461,9 +463,9 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 				b2.Bool(false)
 			}
 		case DateKind:
-			bits, _ := io.ReadAll(io.LimitReader(buf, 4));
+			bits, _ := io.ReadAll(io.LimitReader(buf, 8));
 			ui64 := binary.LittleEndian.Uint64(bits);
-			b2.Date(int64(ui64));
+			b2.Date(time.SecondsToUTC(int64(ui64) / 1000));
 		case RegexKind:
 			regex := readCString(buf);
 			options := readCString(buf);
