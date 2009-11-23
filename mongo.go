@@ -137,9 +137,11 @@ func (c *Cursor) HasMore() bool {
 
 func (c *Cursor) GetNext() (BSON, os.Error) {
 	if c.HasMore() {
-		return c.docs.At(c.pos).(BSON), nil
+		doc := c.docs.At(c.pos).(BSON);
+		c.pos = c.pos + 1;
+		return doc, nil;
 	}
-	return Null, os.NewError("cursor failure");
+	return nil, os.NewError("cursor failure");
 }
 
 func (c *Cursor) GetMore() os.Error {
