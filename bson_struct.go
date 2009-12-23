@@ -328,7 +328,7 @@ func Marshal(val interface{}) (BSON, os.Error) {
 		}
 		return o, nil;
 	case *reflect.SliceValue:
-		a := &_Array{vector.New(0), _Null{}};
+		a := &_Array{new(vector.Vector), _Null{}};
 		for i := 0; i < fv.Len(); i++ {
 			el, err := Marshal(fv.Elem(i).Interface());
 			if err != nil {

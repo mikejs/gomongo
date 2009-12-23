@@ -7,6 +7,7 @@ package mongo
 import (
 	"os";
 	"io";
+	"io/ioutil";
 	"net";
 	"fmt";
 	"rand";
@@ -74,9 +75,9 @@ func (c *Connection) writeMessage(m message) os.Error {
 }
 
 func (c *Connection) readReply() (*replyMsg, os.Error) {
-	size_bits, _ := io.ReadAll(io.LimitReader(c.conn, 4));
+	size_bits, _ := ioutil.ReadAll(io.LimitReader(c.conn, 4));
 	size := binary.LittleEndian.Uint32(size_bits);
-	rest, _ := io.ReadAll(io.LimitReader(c.conn, int64(size)-4));
+	rest, _ := ioutil.ReadAll(io.LimitReader(c.conn, int64(size)-4));
 	reply := parseReply(rest);
 	return reply, nil;
 }
@@ -391,7 +392,7 @@ func (g *getMoreMsg) Bytes() []byte {
 }
 
 func (db *Database) GetCollectionNames() *vector.StringVector {
-	return vector.NewStringVector(0)
+	return new(vector.StringVector)
 }
 
 type replyMsg struct {
@@ -410,7 +411,7 @@ func parseReply(b []byte) *replyMsg {
 	r.cursorID = int64(binary.LittleEndian.Uint64(b[16:24]));
 	r.startingFrom = int32(binary.LittleEndian.Uint32(b[24:28]));
 	r.numberReturned = int32(binary.LittleEndian.Uint32(b[28:32]));
-	r.docs = vector.New(0);
+	r.docs = new(vector.Vector)
 
 	if r.numberReturned > 0 {
 		buf := bytes.NewBuffer(b[36:len(b)]);
@@ -421,7 +422,7 @@ func parseReply(b []byte) *replyMsg {
 			bb.Object();
 			Parse(buf, bb);
 			r.docs.Push(bson);
-			io.ReadAll(io.LimitReader(buf, 4));
+			ioutil.ReadAll(io.LimitReader(buf, 4));
 		}
 	}
 

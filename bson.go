@@ -9,6 +9,7 @@ package mongo
 import (
 	"os";
 	"io";
+	"io/ioutil";
 	"fmt";
 	"math";
 	"time";
@@ -375,7 +376,7 @@ func (bb *_BSONBuilder) Get() BSON {
 func (bb *_BSONBuilder) Float64(f float64)	{ bb.Put(&_Number{f, _Null{}}) }
 func (bb *_BSONBuilder) String(s string)	{ bb.Put(&_String{s, _Null{}}) }
 func (bb *_BSONBuilder) Object()		{ bb.Put(&_Object{make(map[string]BSON), _Null{}}) }
-func (bb *_BSONBuilder) Array()			{ bb.Put(&_Array{vector.New(0), _Null{}}) }
+func (bb *_BSONBuilder) Array()			{ bb.Put(&_Array{new(vector.Vector), _Null{}}) }
 func (bb *_BSONBuilder) Bool(b bool)		{ bb.Put(&_Boolean{b, _Null{}}) }
 func (bb *_BSONBuilder) Date(t *time.Time)	{ bb.Put(&_Date{t, _Null{}}) }
 func (bb *_BSONBuilder) Null()			{ bb.Put(Null) }
@@ -447,26 +448,26 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 		switch kind {
 		case NumberKind:
 			lr := io.LimitReader(buf, 8);
-			bits, _ := io.ReadAll(lr);
+			bits, _ := ioutil.ReadAll(lr);
 			ui64 := binary.LittleEndian.Uint64(bits);
 			fl64 := math.Float64frombits(ui64);
 			b2.Float64(fl64);
 		case StringKind:
-			bits, _ := io.ReadAll(io.LimitReader(buf, 4));
+			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 4));
 			l := binary.LittleEndian.Uint32(bits);
-			s, _ := io.ReadAll(io.LimitReader(buf, int64(l-1)));
+			s, _ := ioutil.ReadAll(io.LimitReader(buf, int64(l-1)));
 			buf.ReadByte();
 			b2.String(string(s));
 		case ObjectKind:
 			b2.Object();
-			io.ReadAll(io.LimitReader(buf, 4));
+			ioutil.ReadAll(io.LimitReader(buf, 4));
 			err = Parse(buf, b2);
 		case ArrayKind:
 			b2.Array();
-			io.ReadAll(io.LimitReader(buf, 4));
+			ioutil.ReadAll(io.LimitReader(buf, 4));
 			err = Parse(buf, b2);
 		case OIDKind:
-			oid, _ := io.ReadAll(io.LimitReader(buf, 12));
+			oid, _ := ioutil.ReadAll(io.LimitReader(buf, 12));
 			b2.OID(oid);
 		case BooleanKind:
 			b, _ := buf.ReadByte();
@@ -476,7 +477,7 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 				b2.Bool(false)
 			}
 		case DateKind:
-			bits, _ := io.ReadAll(io.LimitReader(buf, 8));
+			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 8));
 			ui64 := binary.LittleEndian.Uint64(bits);
 			b2.Date(time.SecondsToUTC(int64(ui64) / 1000));
 		case RegexKind:
@@ -484,11 +485,11 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 			options := readCString(buf);
 			b2.Regex(regex, options);
 		case IntKind:
-			bits, _ := io.ReadAll(io.LimitReader(buf, 4));
+			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 4));
 			ui32 := binary.LittleEndian.Uint32(bits);
 			b2.Int32(int32(ui32));
 		case LongKind:
-			bits, _ := io.ReadAll(io.LimitReader(buf, 8));
+			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 8));
 			ui64 := binary.LittleEndian.Uint64(bits);
 			b2.Int64(int64(ui64));
 		default:
