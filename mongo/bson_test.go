@@ -1,6 +1,6 @@
-// Copyright 2009 Michael Stephens.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// Copyright 2009,2010, the 'gomongo' Authors.  All rights reserved.
+// Use of this source code is governed by the New BSD License
+// that can be found in the LICENSE file.
 
 package mongo
 
