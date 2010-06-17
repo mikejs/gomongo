@@ -37,8 +37,7 @@ type message interface {
 }
 
 type Connection struct {
-	host string
-	port int
+	addr *net.TCPAddr
 	conn *net.TCPConn
 }
 
@@ -57,15 +56,20 @@ func Connect(host string, port int) (*Connection, os.Error) {
 		return nil, err
 	}
 
+	return ConnectByAddr(addr)
+}
+
+func ConnectByAddr(addr *net.TCPAddr) (*Connection, os.Error) {
+	// Connects from local host (nil)
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Connection{host, port, conn}, nil
+	return &Connection{addr, conn}, nil
 }
 
-/* Closes the conection to the Database. */
+/* Closes the conection to the database. */
 func (self *Connection) Close() os.Error {
 	if err := self.conn.Close(); err != nil {
 		return err
