@@ -69,8 +69,8 @@ func ConnectByAddr(addr *net.TCPAddr) (*Connection, os.Error) {
 	return &Connection{addr, conn}, nil
 }
 
-/* Closes the conection to the database. */
-func (self *Connection) Close() os.Error {
+/* Disconnects the conection from MongoDB. */
+func (self *Connection) Disconnect() os.Error {
 	if err := self.conn.Close(); err != nil {
 		return err
 	}
