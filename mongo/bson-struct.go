@@ -7,21 +7,21 @@
 package mongo
 
 import (
-	"reflect";
-	"strings";
-	"fmt";
-	"os";
-	"bytes";
-	"time";
-	"container/vector";
+	"reflect"
+	"strings"
+	"fmt"
+	"os"
+	"bytes"
+	"time"
+	"container/vector"
 )
 
 type structBuilder struct {
-	val	reflect.Value;
+	val reflect.Value
 
 	// if map_ != nil, write val to map_[key] on each change
-	map_	*reflect.MapValue;
-	key	reflect.Value;
+	map_ *reflect.MapValue
+	key  reflect.Value
 }
 
 var nobuilder *structBuilder
@@ -31,7 +31,7 @@ func isfloat(v reflect.Value) bool {
 	case *reflect.FloatValue, *reflect.Float32Value, *reflect.Float64Value:
 		return true
 	}
-	return false;
+	return false
 }
 
 func setfloat(v reflect.Value, f float64) {
@@ -85,7 +85,7 @@ func (b *structBuilder) Int64(i int64) {
 	if b == nil {
 		return
 	}
-	v := b.val;
+	v := b.val
 	if isfloat(v) {
 		setfloat(v, float64(i))
 	} else {
@@ -106,7 +106,7 @@ func (b *structBuilder) Int32(i int32) {
 	if b == nil {
 		return
 	}
-	v := b.val;
+	v := b.val
 	if isfloat(v) {
 		setfloat(v, float64(i))
 	} else {
@@ -118,7 +118,7 @@ func (b *structBuilder) Float64(f float64) {
 	if b == nil {
 		return
 	}
-	v := b.val;
+	v := b.val
 	if isfloat(v) {
 		setfloat(v, f)
 	} else {
@@ -126,7 +126,7 @@ func (b *structBuilder) Float64(f float64) {
 	}
 }
 
-func (b *structBuilder) Null()	{}
+func (b *structBuilder) Null() {}
 
 func (b *structBuilder) String(s string) {
 	if b == nil {
@@ -162,8 +162,8 @@ func (b *structBuilder) OID(oid []byte) {
 	}
 	if v, ok := b.val.(*reflect.SliceValue); ok {
 		if v.Cap() < 12 {
-			nv := reflect.MakeSlice(v.Type().(*reflect.SliceType), 12, 12);
-			v.Set(nv);
+			nv := reflect.MakeSlice(v.Type().(*reflect.SliceType), 12, 12)
+			v.Set(nv)
 		}
 		for i := 0; i < 12; i++ {
 			v.Elem(i).(*reflect.Uint8Value).Set(oid[i])
@@ -193,16 +193,16 @@ func (b *structBuilder) Elem(i int) Builder {
 		}
 	case *reflect.SliceValue:
 		if i > v.Cap() {
-			n := v.Cap();
+			n := v.Cap()
 			if n < 8 {
 				n = 8
 			}
 			for n <= i {
 				n *= 2
 			}
-			nv := reflect.MakeSlice(v.Type().(*reflect.SliceType), v.Len(), n);
-			reflect.ArrayCopy(nv, v);
-			v.Set(nv);
+			nv := reflect.MakeSlice(v.Type().(*reflect.SliceType), v.Len(), n)
+			reflect.ArrayCopy(nv, v)
+			v.Set(nv)
 		}
 		if v.Len() <= i && i < v.Cap() {
 			v.SetLen(i + 1)
@@ -211,7 +211,7 @@ func (b *structBuilder) Elem(i int) Builder {
 			return &structBuilder{val: v.Elem(i)}
 		}
 	}
-	return nobuilder;
+	return nobuilder
 }
 
 func (b *structBuilder) Object() {
@@ -220,11 +220,11 @@ func (b *structBuilder) Object() {
 	}
 	if v, ok := b.val.(*reflect.PtrValue); ok && v.IsNil() {
 		if v.IsNil() {
-			v.PointTo(reflect.MakeZero(v.Type().(*reflect.PtrType).Elem()));
-			b.Flush();
+			v.PointTo(reflect.MakeZero(v.Type().(*reflect.PtrType).Elem()))
+			b.Flush()
 		}
-		b.map_ = nil;
-		b.val = v.Elem();
+		b.map_ = nil
+		b.val = v.Elem()
 	}
 	if v, ok := b.val.(*reflect.MapValue); ok && v.IsNil() {
 		v.Set(reflect.MakeMap(v.Type().(*reflect.MapType)))
@@ -237,34 +237,34 @@ func (b *structBuilder) Key(k string) Builder {
 	}
 	switch v := reflect.Indirect(b.val).(type) {
 	case *reflect.StructValue:
-		t := v.Type().(*reflect.StructType);
+		t := v.Type().(*reflect.StructType)
 		// Case-insensitive field lookup.
-		k = strings.ToLower(k);
+		k = strings.ToLower(k)
 		for i := 0; i < t.NumField(); i++ {
 			if strings.ToLower(t.Field(i).Name) == k {
 				return &structBuilder{val: v.Field(i)}
 			}
 		}
 	case *reflect.MapValue:
-		t := v.Type().(*reflect.MapType);
+		t := v.Type().(*reflect.MapType)
 		if t.Key() != reflect.Typeof(k) {
 			break
 		}
-		key := reflect.NewValue(k);
-		elem := v.Elem(key);
+		key := reflect.NewValue(k)
+		elem := v.Elem(key)
 		if elem == nil {
-			v.SetElem(key, reflect.MakeZero(t.Elem()));
-			elem = v.Elem(key);
+			v.SetElem(key, reflect.MakeZero(t.Elem()))
+			elem = v.Elem(key)
 		}
-		return &structBuilder{val: elem, map_: v, key: key};
+		return &structBuilder{val: elem, map_: v, key: key}
 	}
-	return nobuilder;
+	return nobuilder
 }
 
 func Unmarshal(b []byte, val interface{}) (err os.Error) {
-	sb := &structBuilder{val: reflect.NewValue(val)};
-	err = Parse(bytes.NewBuffer(b[4:len(b)]), sb);
-	return;
+	sb := &structBuilder{val: reflect.NewValue(val)}
+	err = Parse(bytes.NewBuffer(b[4:len(b)]), sb)
+	return
 }
 
 func Marshal(val interface{}) (BSON, os.Error) {
@@ -289,7 +289,7 @@ func Marshal(val interface{}) (BSON, os.Error) {
 		return &_Date{v, _Null{}}, nil
 	}
 
-	var value reflect.Value;
+	var value reflect.Value
 	switch nv := reflect.NewValue(val).(type) {
 	case *reflect.PtrValue:
 		value = nv.Elem()
@@ -299,47 +299,48 @@ func Marshal(val interface{}) (BSON, os.Error) {
 
 	switch fv := value.(type) {
 	case *reflect.StructValue:
-		o := &_Object{map[string]BSON{}, _Null{}};
-		t := fv.Type().(*reflect.StructType);
+		o := &_Object{map[string]BSON{}, _Null{}}
+		t := fv.Type().(*reflect.StructType)
 		for i := 0; i < t.NumField(); i++ {
-			key := strings.ToLower(t.Field(i).Name);
-			el, err := Marshal(fv.Field(i).Interface());
+			key := strings.ToLower(t.Field(i).Name)
+			el, err := Marshal(fv.Field(i).Interface())
 			if err != nil {
 				return nil, err
 			}
-			o.value[key] = el;
+			o.value[key] = el
 		}
-		return o, nil;
+		return o, nil
 	case *reflect.MapValue:
-		o := &_Object{map[string]BSON{}, _Null{}};
-		mt := fv.Type().(*reflect.MapType);
+		o := &_Object{map[string]BSON{}, _Null{}}
+		mt := fv.Type().(*reflect.MapType)
 		if mt.Key() != reflect.Typeof("") {
 			return nil, os.NewError("can't marshall maps with non-string key types")
 		}
 
-		keys := fv.Keys();
+		keys := fv.Keys()
 		for _, k := range keys {
-			sk := k.(*reflect.StringValue).Get();
-			el, err := Marshal(fv.Elem(k).Interface());
+			sk := k.(*reflect.StringValue).Get()
+			el, err := Marshal(fv.Elem(k).Interface())
 			if err != nil {
 				return nil, err
 			}
-			o.value[sk] = el;
+			o.value[sk] = el
 		}
-		return o, nil;
+		return o, nil
 	case *reflect.SliceValue:
-		a := &_Array{new(vector.Vector), _Null{}};
+		a := &_Array{new(vector.Vector), _Null{}}
 		for i := 0; i < fv.Len(); i++ {
-			el, err := Marshal(fv.Elem(i).Interface());
+			el, err := Marshal(fv.Elem(i).Interface())
 			if err != nil {
 				return nil, err
 			}
-			a.value.Push(el);
+			a.value.Push(el)
 		}
-		return a, nil;
+		return a, nil
 	default:
 		return nil, os.NewError(fmt.Sprintf("don't know how to marshal %v\n", value.Type()))
 	}
 
-	return nil, nil;
+	return nil, nil
 }
+
