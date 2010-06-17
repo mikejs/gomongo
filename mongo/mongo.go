@@ -52,10 +52,12 @@ func header(length, reqID, respTo, opCode int32) []byte {
 }
 
 func Connect(host string, port int) (*Connection, os.Error) {
-	laddr, _ := net.ResolveTCPAddr("localhost")
-	addr, _ := net.ResolveTCPAddr(fmt.Sprintf("%s:%d", host, port))
-	conn, err := net.DialTCP("tcp", laddr, addr)
+	addr, err := net.ResolveTCPAddr(fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		return nil, err
+	}
 
+	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		return nil, err
 	}
