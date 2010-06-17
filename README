@@ -1,14 +1,26 @@
-Example usage:
+Example usage
+-------------
 
-import "mongo"
+	package main
 
-doc, _ := mongo.Marshal(map[string]string{"_id": "doc1", "title": "A Mongo document", "content": "Testing, 1. 2. 3."});
-conn, _ := mongo.Connect("127.0.0.1", 27017);
-collection := conn.GetDB("test").GetCollection("test_collection");
-collection.Insert(doc);
+	import "mongo"
 
-query, _ := mongo.Marshal(map[string]string{"_id": "doc1"});
-got, _ := collection.FindOne(query);
-mongo.Equal(doc, got);  // true!
 
-collection.Drop();
+	func main() {
+		conn, _ := mongo.Connect("127.0.0.1", 27017)
+		collection := conn.GetDB("test").GetCollection("test_collection")
+
+		doc, _ := mongo.Marshal(map[string]string{
+			"_id":     "doc1",
+			"title":   "A Mongo document",
+			"content": "Testing, 1. 2. 3.",
+		})
+		collection.Insert(doc)
+
+		query, _ := mongo.Marshal(map[string]string{"_id": "doc1"})
+		got, _ := collection.FindOne(query)
+		mongo.Equal(doc, got) // true!
+
+		collection.Drop()
+	}
+
