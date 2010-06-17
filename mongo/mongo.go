@@ -42,6 +42,15 @@ type Connection struct {
 	conn *net.TCPConn
 }
 
+func header(length, reqID, respTo, opCode int32) []byte {
+	b := make([]byte, 16)
+	binary.LittleEndian.PutUint32(b[0:4], uint32(length))
+	binary.LittleEndian.PutUint32(b[4:8], uint32(reqID))
+	binary.LittleEndian.PutUint32(b[8:12], uint32(respTo))
+	binary.LittleEndian.PutUint32(b[12:16], uint32(opCode))
+	return b
+}
+
 func Connect(host string, port int) (*Connection, os.Error) {
 	laddr, _ := net.ResolveTCPAddr("localhost")
 	addr, _ := net.ResolveTCPAddr(fmt.Sprintf("%s:%d", host, port))
@@ -54,13 +63,12 @@ func Connect(host string, port int) (*Connection, os.Error) {
 	return &Connection{host, port, conn}, nil
 }
 
-func header(length, reqID, respTo, opCode int32) []byte {
-	b := make([]byte, 16)
-	binary.LittleEndian.PutUint32(b[0:4], uint32(length))
-	binary.LittleEndian.PutUint32(b[4:8], uint32(reqID))
-	binary.LittleEndian.PutUint32(b[8:12], uint32(respTo))
-	binary.LittleEndian.PutUint32(b[12:16], uint32(opCode))
-	return b
+/* Closes the conection to the Database. */
+func (self *Connection) Close() os.Error {
+	if err := self.conn.Close(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Connection) writeMessage(m message) os.Error {
