@@ -77,6 +77,16 @@ func (self *Connection) Disconnect() os.Error {
 	return nil
 }
 
+/* Reconnects using the same address `Addr`. */
+func (self *Connection) Reconnect() (*Connection, os.Error) {
+	connection, err := ConnectByAddr(self.Addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return connection, nil
+}
+
 func (c *Connection) writeMessage(m message) os.Error {
 	body := m.Bytes()
 	hb := header(int32(len(body)+16), m.RequestID(), 0, m.OpCode())
