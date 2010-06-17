@@ -5,7 +5,6 @@
 package mongo
 
 import (
-	"mongo"
 	"testing"
 	"fmt"
 	"time"
@@ -21,10 +20,10 @@ type IndexCmd struct {
 }
 
 func TestStuff(t *testing.T) {
-	obj, err := mongo.BytesToBSON([]byte{92, 0, 0, 0, 1, 115, 101, 99, 111, 110, 100, 0, 0, 0, 0, 0, 0, 0, 0, 64, 3, 102, 105, 102, 116, 104, 0, 23, 0, 0, 0, 2, 118, 0, 2, 0, 0, 0, 101, 0, 2, 102, 0, 2, 0, 0, 0, 105, 0, 0, 3, 102, 111, 117, 114, 116, 104, 0, 5, 0, 0, 0, 0, 2, 116, 104, 105, 114, 100, 0, 6, 0, 0, 0, 116, 104, 114, 101, 101, 0, 16, 102, 105, 114, 115, 116, 0, 1, 0, 0, 0, 0})
+	obj, err := BytesToBSON([]byte{92, 0, 0, 0, 1, 115, 101, 99, 111, 110, 100, 0, 0, 0, 0, 0, 0, 0, 0, 64, 3, 102, 105, 102, 116, 104, 0, 23, 0, 0, 0, 2, 118, 0, 2, 0, 0, 0, 101, 0, 2, 102, 0, 2, 0, 0, 0, 105, 0, 0, 3, 102, 111, 117, 114, 116, 104, 0, 5, 0, 0, 0, 0, 2, 116, 104, 105, 114, 100, 0, 6, 0, 0, 0, 116, 104, 114, 101, 101, 0, 16, 102, 105, 114, 115, 116, 0, 1, 0, 0, 0, 0})
 	assertTrue(err == nil, "failed parsing BSON obj", t)
 
-	conn, err := mongo.Connect("127.0.0.1", 27017)
+	conn, err := Connect("127.0.0.1", 27017)
 	assertTrue(err == nil && conn != nil, fmt.Sprintf("failed connecting to mongo: %v", err), t)
 
 	db := conn.GetDB("go_driver_tests")
@@ -33,34 +32,34 @@ func TestStuff(t *testing.T) {
 
 	coll.Insert(obj)
 
-	q, _ := mongo.Marshal(map[string]string{})
+	q, _ := Marshal(map[string]string{})
 	ret, err := coll.FindAll(q)
 	assertTrue(err == nil && ret != nil, "query succeeded", t)
 
 	doc, _ := ret.GetNext()
-	assertTrue(doc.Kind() == mongo.ObjectKind, "query returned document", t)
+	assertTrue(doc.Kind() == ObjectKind, "query returned document", t)
 	assertTrue(doc.Get("first").Int() == 1, "returned doc has proper 'first' element", t)
 	assertTrue(doc.Get("second").Number() == 2, "returned doc has proper 'second' element", t)
 	assertTrue(doc.Get("third").String() == "three", "returned doc has proper 'third' element", t)
-	assertTrue(doc.Get("fourth").Kind() == mongo.ObjectKind, "returned doc has proper 'fourth' element", t)
+	assertTrue(doc.Get("fourth").Kind() == ObjectKind, "returned doc has proper 'fourth' element", t)
 	assertTrue(doc.Get("fifth").Get("f").String() == "i" && doc.Get("fifth").Get("v").String() == "e", "returned doc has proper 'fifth' element", t)
 
 	count, err := coll.Count(q)
 	assertTrue(count == 1, "count", t)
 
-	newDoc, _ := mongo.Marshal(map[string]string{"first": "one", "second": "two", "third": "three"})
+	newDoc, _ := Marshal(map[string]string{"first": "one", "second": "two", "third": "three"})
 	coll.Update(q, newDoc)
 	doc, _ = coll.FindOne(q)
 	assertTrue(doc.Get("first").String() == "one", "update", t)
 
-	rem, _ := mongo.Marshal(map[string]string{"third": "three"})
+	rem, _ := Marshal(map[string]string{"third": "three"})
 	coll.Remove(rem)
 	doc, err = coll.FindOne(rem)
 	assertTrue(err != nil, "remove", t)
 
 	coll.Drop()
 
-	statusCmd, _ := mongo.Marshal(map[string]float64{"serverStatus": 1})
+	statusCmd, _ := Marshal(map[string]float64{"serverStatus": 1})
 	status, _ := db.Command(statusCmd)
 	assertTrue(status.Get("uptime").Number() != 0, "valid serverStatus", t)
 
@@ -68,14 +67,14 @@ func TestStuff(t *testing.T) {
 }
 
 func TestOtherStuff(t *testing.T) {
-	doc, _ := mongo.Marshal(map[string]string{"_id": "doc1", "title": "A Mongo document", "content": "Testing, 1. 2. 3."})
-	conn, _ := mongo.Connect("127.0.0.1", 27017)
+	doc, _ := Marshal(map[string]string{"_id": "doc1", "title": "A Mongo document", "content": "Testing, 1. 2. 3."})
+	conn, _ := Connect("127.0.0.1", 27017)
 	collection := conn.GetDB("test").GetCollection("test_collection")
 	collection.Insert(doc)
 
-	query, _ := mongo.Marshal(map[string]string{"_id": "doc1"})
+	query, _ := Marshal(map[string]string{"_id": "doc1"})
 	got, _ := collection.FindOne(query)
-	assertTrue(mongo.Equal(doc, got), "equal", t)
+	assertTrue(Equal(doc, got), "equal", t)
 
 }
 
@@ -84,7 +83,7 @@ const (
 	BATCH_SIZE = 100
 )
 
-func timeIt(s string, f func(*mongo.Collection, *testing.T), coll *mongo.Collection, t *testing.T) {
+func timeIt(s string, f func(*Collection, *testing.T), coll *Collection, t *testing.T) {
 	start := time.Nanoseconds()
 	f(coll, t)
 	end := time.Nanoseconds()
@@ -95,15 +94,15 @@ func timeIt(s string, f func(*mongo.Collection, *testing.T), coll *mongo.Collect
 }
 
 func TestBenchmark(t *testing.T) {
-	conn, err := mongo.Connect("127.0.0.1", 27017)
+	conn, err := Connect("127.0.0.1", 27017)
 	if err != nil {
 		t.Error("failed connecting")
 	}
 
 	db := conn.GetDB("perf_test")
 	db.Drop()
-	db.GetCollection("creation").Insert(mongo.EmptyObject)
-	db.GetCollection("creation").Count(mongo.EmptyObject)
+	db.GetCollection("creation").Insert(EmptyObject)
+	db.GetCollection("creation").Count(EmptyObject)
 
 	timeIt("single.small Insert", singleInsertSmall, db.GetCollection("single.small"), t)
 	timeIt("single.medium Insert", singleInsertMedium, db.GetCollection("single.medium"), t)
@@ -131,11 +130,11 @@ type smallStruct struct {
 	X int
 }
 
-func singleInsertSmall(coll *mongo.Collection, t *testing.T) {
+func singleInsertSmall(coll *Collection, t *testing.T) {
 	ss := &smallStruct{0}
 	for i := 0; i < PER_TRIAL; i++ {
 		ss.X = i
-		obj, err := mongo.Marshal(ss)
+		obj, err := Marshal(ss)
 		if err != nil {
 			t.Errorf("singleInsertSmall Marshal: %v\n", err)
 		}
@@ -147,9 +146,9 @@ func singleInsertSmall(coll *mongo.Collection, t *testing.T) {
 	}
 }
 
-func findOneSmall(coll *mongo.Collection, t *testing.T) {
+func findOneSmall(coll *Collection, t *testing.T) {
 	ss := &smallStruct{PER_TRIAL / 2}
-	obj, err := mongo.Marshal(ss)
+	obj, err := Marshal(ss)
 	if err != nil {
 		t.Errorf("findOneSmall Marshal: %v\n", err)
 	}
@@ -170,11 +169,11 @@ type mediumStruct struct {
 	X       int
 }
 
-func singleInsertMedium(coll *mongo.Collection, t *testing.T) {
+func singleInsertMedium(coll *Collection, t *testing.T) {
 	ms := &mediumStruct{5, 5.05, false, []string{"test", "benchmark"}, 0}
 	for i := 0; i < PER_TRIAL; i++ {
 		ms.X = i
-		obj, err := mongo.Marshal(ms)
+		obj, err := Marshal(ms)
 		if err != nil {
 			t.Errorf("singleInsertMedium Marshal: %v\n", err)
 		}
@@ -186,9 +185,9 @@ func singleInsertMedium(coll *mongo.Collection, t *testing.T) {
 	}
 }
 
-func findOneMedium(coll *mongo.Collection, t *testing.T) {
+func findOneMedium(coll *Collection, t *testing.T) {
 	ss := &smallStruct{PER_TRIAL / 2}
-	obj, err := mongo.Marshal(ss)
+	obj, err := Marshal(ss)
 	if err != nil {
 		t.Errorf("findOneMedium Marshal: %v\n", err)
 	}
@@ -201,9 +200,9 @@ func findOneMedium(coll *mongo.Collection, t *testing.T) {
 	}
 }
 
-func findOne(coll *mongo.Collection, t *testing.T) {
+func findOne(coll *Collection, t *testing.T) {
 	ss := &smallStruct{PER_TRIAL / 2}
-	obj, err := mongo.Marshal(ss)
+	obj, err := Marshal(ss)
 	if err != nil {
 		t.Errorf("findOne Marshal: %v\n", err)
 	}
@@ -226,7 +225,7 @@ type largeStruct struct {
 	X                int
 }
 
-func singleInsertLarge(coll *mongo.Collection, t *testing.T) {
+func singleInsertLarge(coll *Collection, t *testing.T) {
 	base_words := []string{"10gen", "web", "open", "source", "application", "paas",
 		"platform-as-a-service", "technology", "helps",
 		"developers", "focus", "building", "mongodb", "mongo",
@@ -254,7 +253,7 @@ func singleInsertLarge(coll *mongo.Collection, t *testing.T) {
 
 	for i := 0; i < PER_TRIAL; i++ {
 		ls.X = i
-		obj, err := mongo.Marshal(ls)
+		obj, err := Marshal(ls)
 		if err != nil {
 			t.Errorf("singleInsertLarge Marshal: %v", err)
 		}
