@@ -37,7 +37,7 @@ type message interface {
 }
 
 type Connection struct {
-	addr *net.TCPAddr
+	Addr *net.TCPAddr
 	conn *net.TCPConn
 }
 
