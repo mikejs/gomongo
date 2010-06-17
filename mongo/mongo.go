@@ -97,7 +97,7 @@ func (c *Connection) readReply() (*replyMsg, os.Error) {
 }
 
 type Database struct {
-	conn *Connection
+	Conn *Connection
 	name string
 }
 
@@ -165,7 +165,7 @@ func (c *Cursor) GetMore() os.Error {
 	}
 
 	gm := &getMoreMsg{c.collection.fullName(), 0, c.id, rand.Int31()}
-	conn := c.collection.db.conn
+	conn := c.collection.db.Conn
 	err := conn.writeMessage(gm)
 	if err != nil {
 		return err
@@ -190,7 +190,7 @@ func (c *Cursor) Close() os.Error {
 
 	req_id := rand.Int31()
 	km := &killMsg{1, []int64{c.id}, req_id}
-	conn := c.collection.db.conn
+	conn := c.collection.db.Conn
 	return conn.writeMessage(km)
 }
 
@@ -238,17 +238,17 @@ func (c *Collection) Drop() os.Error {
 
 func (c *Collection) Insert(doc BSON) os.Error {
 	im := &insertMsg{c.fullName(), doc, rand.Int31()}
-	return c.db.conn.writeMessage(im)
+	return c.db.Conn.writeMessage(im)
 }
 
 func (c *Collection) Remove(selector BSON) os.Error {
 	dm := &deleteMsg{c.fullName(), selector, rand.Int31()}
-	return c.db.conn.writeMessage(dm)
+	return c.db.Conn.writeMessage(dm)
 }
 
 func (coll *Collection) Query(query BSON, skip, limit int) (*Cursor, os.Error) {
 	req_id := rand.Int31()
-	conn := coll.db.conn
+	conn := coll.db.Conn
 	qm := &queryMsg{0, coll.fullName(), int32(skip), int32(limit), query, req_id}
 
 	err := conn.writeMessage(qm)
@@ -291,7 +291,7 @@ func (coll *Collection) Count(query BSON) (int64, os.Error) {
 
 func (coll *Collection) update(um *updateMsg) os.Error {
 	um.requestID = rand.Int31()
-	conn := coll.db.conn
+	conn := coll.db.Conn
 	return conn.writeMessage(um)
 }
 
