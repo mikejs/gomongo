@@ -1,4 +1,4 @@
-// Copyright 2009,2010, the 'gomongo' Authors.  All rights reserved.
+// Copyright 2009,2010 The 'gomongo' Authors.  All rights reserved.
 // Use of this source code is governed by the New BSD License
 // that can be found in the LICENSE file.
 
@@ -18,35 +18,35 @@ type Cursor struct {
 	docs       *vector.Vector
 }
 
-func (c *Cursor) HasMore() bool {
-	if c.pos < c.docs.Len() {
+func (self *Cursor) HasMore() bool {
+	if self.pos < self.docs.Len() {
 		return true
 	}
 
-	err := c.GetMore()
+	err := self.GetMore()
 	if err != nil {
 		return false
 	}
 
-	return c.pos < c.docs.Len()
+	return self.pos < self.docs.Len()
 }
 
-func (c *Cursor) GetNext() (BSON, os.Error) {
-	if c.HasMore() {
-		doc := c.docs.At(c.pos).(BSON)
-		c.pos = c.pos + 1
+func (self *Cursor) GetNext() (BSON, os.Error) {
+	if self.HasMore() {
+		doc := self.docs.At(self.pos).(BSON)
+		self.pos = self.pos + 1
 		return doc, nil
 	}
 	return nil, os.NewError("cursor failure")
 }
 
-func (c *Cursor) GetMore() os.Error {
-	if c.id == 0 {
+func (self *Cursor) GetMore() os.Error {
+	if self.id == 0 {
 		return os.NewError("no cursorID")
 	}
 
-	gm := &getMoreMsg{c.collection.fullName(), 0, c.id, rand.Int31()}
-	conn := c.collection.db.Conn
+	gm := &getMoreMsg{self.collection.fullName(), 0, self.id, rand.Int31()}
+	conn := self.collection.db.Conn
 	err := conn.writeMessage(gm)
 	if err != nil {
 		return err
@@ -57,21 +57,21 @@ func (c *Cursor) GetMore() os.Error {
 		return err
 	}
 
-	c.pos = 0
-	c.docs = reply.docs
+	self.pos = 0
+	self.docs = reply.docs
 
 	return nil
 }
 
-func (c *Cursor) Close() os.Error {
-	if c.id == 0 {
+func (self *Cursor) Close() os.Error {
+	if self.id == 0 {
 		// not open on server
 		return nil
 	}
 
 	req_id := rand.Int31()
-	km := &killMsg{1, []int64{c.id}, req_id}
-	conn := c.collection.db.Conn
+	km := &killMsg{1, []int64{self.id}, req_id}
+	conn := self.collection.db.Conn
 	return conn.writeMessage(km)
 }
 

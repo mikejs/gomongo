@@ -1,4 +1,4 @@
-// Copyright 2009,2010, the 'gomongo' Authors.  All rights reserved.
+// Copyright 2009,2010 The 'gomongo' Authors.  All rights reserved.
 // Use of this source code is governed by the New BSD License
 // that can be found in the LICENSE file.
 
@@ -22,15 +22,11 @@ type Collection struct {
 	name string
 }
 
-func (db *Database) GetCollection(name string) *Collection {
-	return &Collection{db, name}
-}
+func (self *Collection) fullName() string { return self.db.name + "." + self.name }
 
-func (c *Collection) fullName() string { return c.db.name + "." + c.name }
-
-func (c *Collection) EnsureIndex(name string, index map[string]int) os.Error {
-	coll := c.db.GetCollection("system.indexes")
-	id := &indexDesc{name, c.fullName(), index}
+func (self *Collection) EnsureIndex(name string, index map[string]int) os.Error {
+	coll := self.db.GetCollection("system.indexes")
+	id := &indexDesc{name, self.fullName(), index}
 	desc, err := Marshal(id)
 	if err != nil {
 		return err
@@ -38,44 +34,44 @@ func (c *Collection) EnsureIndex(name string, index map[string]int) os.Error {
 	return coll.Insert(desc)
 }
 
-func (c *Collection) DropIndexes() os.Error { return c.DropIndex("*") }
+func (self *Collection) DropIndexes() os.Error { return self.DropIndex("*") }
 
-func (c *Collection) DropIndex(name string) os.Error {
-	cmdm := map[string]string{"deleteIndexes": c.fullName(), "index": name}
+func (self *Collection) DropIndex(name string) os.Error {
+	cmdm := map[string]string{"deleteIndexes": self.fullName(), "index": name}
 	cmd, err := Marshal(cmdm)
 	if err != nil {
 		return err
 	}
 
-	_, err = c.db.Command(cmd)
+	_, err = self.db.Command(cmd)
 	return err
 }
 
-func (c *Collection) Drop() os.Error {
-	cmdm := map[string]string{"drop": c.fullName()}
+func (self *Collection) Drop() os.Error {
+	cmdm := map[string]string{"drop": self.fullName()}
 	cmd, err := Marshal(cmdm)
 	if err != nil {
 		return err
 	}
 
-	_, err = c.db.Command(cmd)
+	_, err = self.db.Command(cmd)
 	return err
 }
 
-func (c *Collection) Insert(doc BSON) os.Error {
-	im := &insertMsg{c.fullName(), doc, rand.Int31()}
-	return c.db.Conn.writeMessage(im)
+func (self *Collection) Insert(doc BSON) os.Error {
+	im := &insertMsg{self.fullName(), doc, rand.Int31()}
+	return self.db.Conn.writeMessage(im)
 }
 
-func (c *Collection) Remove(selector BSON) os.Error {
-	dm := &deleteMsg{c.fullName(), selector, rand.Int31()}
-	return c.db.Conn.writeMessage(dm)
+func (self *Collection) Remove(selector BSON) os.Error {
+	dm := &deleteMsg{self.fullName(), selector, rand.Int31()}
+	return self.db.Conn.writeMessage(dm)
 }
 
-func (coll *Collection) Query(query BSON, skip, limit int) (*Cursor, os.Error) {
+func (self *Collection) Query(query BSON, skip, limit int) (*Cursor, os.Error) {
 	req_id := rand.Int31()
-	conn := coll.db.Conn
-	qm := &queryMsg{0, coll.fullName(), int32(skip), int32(limit), query, req_id}
+	conn := self.db.Conn
+	qm := &queryMsg{0, self.fullName(), int32(skip), int32(limit), query, req_id}
 
 	err := conn.writeMessage(qm)
 	if err != nil {
@@ -90,31 +86,31 @@ func (coll *Collection) Query(query BSON, skip, limit int) (*Cursor, os.Error) {
 		return nil, os.NewError("wrong responseTo code")
 	}
 
-	return &Cursor{coll, reply.cursorID, 0, reply.docs}, nil
+	return &Cursor{self, reply.cursorID, 0, reply.docs}, nil
 }
 
-func (coll *Collection) FindAll(query BSON) (*Cursor, os.Error) {
-	return coll.Query(query, 0, 0)
+func (self *Collection) FindAll(query BSON) (*Cursor, os.Error) {
+	return self.Query(query, 0, 0)
 }
 
-func (coll *Collection) FindOne(query BSON) (BSON, os.Error) {
-	cursor, err := coll.Query(query, 0, 1)
+func (self *Collection) FindOne(query BSON) (BSON, os.Error) {
+	cursor, err := self.Query(query, 0, 1)
 	if err != nil {
 		return nil, err
 	}
 	return cursor.GetNext()
 }
 
-func (coll *Collection) Count(query BSON) (int64, os.Error) {
+func (self *Collection) Count(query BSON) (int64, os.Error) {
 	cmd := &_Object{
 		map[string]BSON{
-			"count": &_String{coll.name, _Null{}},
+			"count": &_String{self.name, _Null{}},
 			"query": query,
 		},
 		_Null{},
 	}
 
-	reply, err := coll.db.Command(cmd)
+	reply, err := self.db.Command(cmd)
 	if err != nil {
 		return -1, err
 	}
@@ -122,25 +118,25 @@ func (coll *Collection) Count(query BSON) (int64, os.Error) {
 	return int64(reply.Get("n").Number()), nil
 }
 
-func (coll *Collection) update(um *updateMsg) os.Error {
+func (self *Collection) update(um *updateMsg) os.Error {
 	um.requestID = rand.Int31()
-	conn := coll.db.Conn
+	conn := self.db.Conn
 	return conn.writeMessage(um)
 }
 
-func (coll *Collection) Update(selector, document BSON) os.Error {
-	return coll.update(&updateMsg{coll.fullName(), 0, selector, document, 0})
+func (self *Collection) Update(selector, document BSON) os.Error {
+	return self.update(&updateMsg{self.fullName(), 0, selector, document, 0})
 }
 
-func (coll *Collection) Upsert(selector, document BSON) os.Error {
-	return coll.update(&updateMsg{coll.fullName(), 1, selector, document, 0})
+func (self *Collection) Upsert(selector, document BSON) os.Error {
+	return self.update(&updateMsg{self.fullName(), 1, selector, document, 0})
 }
 
-func (coll *Collection) UpdateAll(selector, document BSON) os.Error {
-	return coll.update(&updateMsg{coll.fullName(), 2, selector, document, 0})
+func (self *Collection) UpdateAll(selector, document BSON) os.Error {
+	return self.update(&updateMsg{self.fullName(), 2, selector, document, 0})
 }
 
-func (coll *Collection) UpsertAll(selector, document BSON) os.Error {
-	return coll.update(&updateMsg{coll.fullName(), 3, selector, document, 0})
+func (self *Collection) UpsertAll(selector, document BSON) os.Error {
+	return self.update(&updateMsg{self.fullName(), 3, selector, document, 0})
 }
 

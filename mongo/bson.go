@@ -1,8 +1,9 @@
 // Based on the Go json package.
-// Original Copyright 2009 The Go Authors. All rights reserved.
-// Modifications Copyright 2009 Michael Stephens.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE and LICENSE.GO files.
+
+// Copyright 2009 The Go Authors.  All rights reserved.
+// Copyright 2009,2010 The 'gomongo' Authors.  All rights reserved.
+// Use of this source code is governed by the New BSD License
+// that can be found in the LICENSE and LICENSE.GO files.
 
 package mongo
 
@@ -84,10 +85,10 @@ type _Number struct {
 	_Null
 }
 
-func (n *_Number) Kind() int       { return NumberKind }
-func (n *_Number) Number() float64 { return n.value }
-func (n *_Number) Bytes() []byte {
-	bits := math.Float64bits(n.value)
+func (self *_Number) Kind() int       { return NumberKind }
+func (self *_Number) Number() float64 { return self.value }
+func (self *_Number) Bytes() []byte {
+	bits := math.Float64bits(self.value)
 	b := []byte{0, 0, 0, 0, 0, 0, 0, 0}
 	binary.LittleEndian.PutUint64(b, bits)
 	return b
@@ -98,15 +99,15 @@ type _String struct {
 	_Null
 }
 
-func (s *_String) Kind() int      { return StringKind }
-func (s *_String) String() string { return s.value }
-func (s *_String) Bytes() []byte {
+func (self *_String) Kind() int      { return StringKind }
+func (self *_String) String() string { return self.value }
+func (self *_String) Bytes() []byte {
 	b := []byte{0, 0, 0, 0}
-	l := len(s.value) + 1
+	l := len(self.value) + 1
 	binary.LittleEndian.PutUint32(b, uint32(l))
 
 	buf := bytes.NewBuffer(b)
-	buf.WriteString(s.value)
+	buf.WriteString(self.value)
 	buf.WriteByte(0)
 
 	return buf.Bytes()
@@ -117,23 +118,23 @@ type _Object struct {
 	_Null
 }
 
-func (o *_Object) Kind() int { return ObjectKind }
-func (o *_Object) Get(s string) BSON {
-	if o.value == nil {
+func (self *_Object) Kind() int { return ObjectKind }
+func (self *_Object) Get(s string) BSON {
+	if self.value == nil {
 		return Null
 	}
 
-	b, ok := o.value[s]
+	b, ok := self.value[s]
 	if !ok {
 		return Null
 	}
 
 	return b
 }
-func (o *_Object) Len() int { return len(o.value) }
-func (o *_Object) Bytes() []byte {
+func (self *_Object) Len() int { return len(self.value) }
+func (self *_Object) Bytes() []byte {
 	buf := bytes.NewBuffer([]byte{})
-	for k, v := range o.value {
+	for k, v := range self.value {
 		buf.WriteByte(byte(v.Kind()))
 		buf.WriteString(k)
 		buf.WriteByte(0)
@@ -154,24 +155,24 @@ type _Array struct {
 	_Null
 }
 
-func (a *_Array) Kind() int { return ArrayKind }
-func (a *_Array) Elem(i int) BSON {
-	if a.value == nil {
+func (self *_Array) Kind() int { return ArrayKind }
+func (self *_Array) Elem(i int) BSON {
+	if self.value == nil {
 		return Null
 	}
 
-	if a.Len() < i {
+	if self.Len() < i {
 		return Null
 	}
 
-	return a.value.At(i).(BSON)
+	return self.value.At(i).(BSON)
 }
-func (a *_Array) Len() int { return a.value.Len() }
-func (a *_Array) Bytes() []byte {
+func (self *_Array) Len() int { return self.value.Len() }
+func (self *_Array) Bytes() []byte {
 	buf := bytes.NewBuffer([]byte{})
 
-	for i := 0; i < a.value.Len(); i++ {
-		v := a.value.At(i).(BSON)
+	for i := 0; i < self.value.Len(); i++ {
+		v := self.value.At(i).(BSON)
 		buf.WriteByte(byte(v.Kind()))
 		buf.WriteString(strconv.Itoa(i))
 		buf.WriteByte(0)
@@ -190,19 +191,19 @@ type _OID struct {
 	_Null
 }
 
-func (o *_OID) Kind() int     { return OIDKind }
-func (o *_OID) OID() []byte   { return o.value }
-func (o *_OID) Bytes() []byte { return o.value }
+func (self *_OID) Kind() int     { return OIDKind }
+func (self *_OID) OID() []byte   { return self.value }
+func (self *_OID) Bytes() []byte { return self.value }
 
 type _Boolean struct {
 	value bool
 	_Null
 }
 
-func (b *_Boolean) Kind() int  { return BooleanKind }
-func (b *_Boolean) Bool() bool { return b.value }
-func (b *_Boolean) Bytes() []byte {
-	if b.value {
+func (self *_Boolean) Kind() int  { return BooleanKind }
+func (self *_Boolean) Bool() bool { return self.value }
+func (self *_Boolean) Bytes() []byte {
+	if self.value {
 		return []byte{1}
 	}
 	return []byte{0}
@@ -213,11 +214,11 @@ type _Date struct {
 	_Null
 }
 
-func (d *_Date) Kind() int        { return DateKind }
-func (d *_Date) Date() *time.Time { return d.value }
-func (d *_Date) Bytes() []byte {
+func (self *_Date) Kind() int        { return DateKind }
+func (self *_Date) Date() *time.Time { return self.value }
+func (self *_Date) Bytes() []byte {
 	b := []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	mtime := d.value.Seconds() * 1000
+	mtime := self.value.Seconds() * 1000
 	binary.LittleEndian.PutUint64(b, uint64(mtime))
 	return b
 }
@@ -227,12 +228,12 @@ type _Regex struct {
 	_Null
 }
 
-func (r *_Regex) Kind() int               { return RegexKind }
-func (r *_Regex) Regex() (string, string) { return r.regex, r.options }
-func (r *_Regex) Bytes() []byte {
-	buf := bytes.NewBufferString(r.regex)
+func (self *_Regex) Kind() int               { return RegexKind }
+func (self *_Regex) Regex() (string, string) { return self.regex, self.options }
+func (self *_Regex) Bytes() []byte {
+	buf := bytes.NewBufferString(self.regex)
 	buf.WriteByte(0)
-	buf.WriteString(r.options)
+	buf.WriteString(self.options)
 	buf.WriteByte(0)
 	return buf.Bytes()
 }
@@ -242,11 +243,11 @@ type _Int struct {
 	_Null
 }
 
-func (i *_Int) Kind() int  { return IntKind }
-func (i *_Int) Int() int32 { return i.value }
-func (i *_Int) Bytes() []byte {
+func (self *_Int) Kind() int  { return IntKind }
+func (self *_Int) Int() int32 { return self.value }
+func (self *_Int) Bytes() []byte {
 	b := []byte{0, 0, 0, 0}
-	binary.LittleEndian.PutUint32(b, uint32(i.value))
+	binary.LittleEndian.PutUint32(b, uint32(self.value))
 	return b
 }
 
@@ -255,11 +256,11 @@ type _Long struct {
 	_Null
 }
 
-func (l *_Long) Kind() int   { return LongKind }
-func (l *_Long) Long() int64 { return l.value }
-func (l *_Long) Bytes() []byte {
+func (self *_Long) Kind() int   { return LongKind }
+func (self *_Long) Long() int64 { return self.value }
+func (self *_Long) Bytes() []byte {
 	b := []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	binary.LittleEndian.PutUint64(b, uint64(l.value))
+	binary.LittleEndian.PutUint64(b, uint64(self.value))
 	return b
 }
 
@@ -325,7 +326,7 @@ type Builder interface {
 	Float64(f float64)
 	String(s string)
 	Bool(b bool)
-	Date(d *time.Time)
+	Date(self *time.Time)
 	OID(o []byte)
 	Regex(regex, options string)
 	Null()
@@ -350,47 +351,47 @@ type _BSONBuilder struct {
 	key string
 }
 
-func (bb *_BSONBuilder) Put(b BSON) {
+func (self *_BSONBuilder) Put(b BSON) {
 	switch {
-	case bb.ptr != nil:
-		*bb.ptr = b
-	case bb.arr != nil:
-		bb.arr.Set(bb.elem, b)
-	case bb.obj != nil:
-		bb.obj[bb.key] = b
+	case self.ptr != nil:
+		*self.ptr = b
+	case self.arr != nil:
+		self.arr.Set(self.elem, b)
+	case self.obj != nil:
+		self.obj[self.key] = b
 	}
 }
 
-func (bb *_BSONBuilder) Get() BSON {
+func (self *_BSONBuilder) Get() BSON {
 	switch {
-	case bb.ptr != nil:
-		return *bb.ptr
-	case bb.arr != nil:
-		return bb.arr.At(bb.elem).(BSON)
-	case bb.obj != nil:
-		return bb.obj[bb.key]
+	case self.ptr != nil:
+		return *self.ptr
+	case self.arr != nil:
+		return self.arr.At(self.elem).(BSON)
+	case self.obj != nil:
+		return self.obj[self.key]
 	}
 	return nil
 }
 
-func (bb *_BSONBuilder) Float64(f float64) { bb.Put(&_Number{f, _Null{}}) }
-func (bb *_BSONBuilder) String(s string)   { bb.Put(&_String{s, _Null{}}) }
-func (bb *_BSONBuilder) Object()           { bb.Put(&_Object{make(map[string]BSON), _Null{}}) }
-func (bb *_BSONBuilder) Array()            { bb.Put(&_Array{new(vector.Vector), _Null{}}) }
-func (bb *_BSONBuilder) Bool(b bool)       { bb.Put(&_Boolean{b, _Null{}}) }
-func (bb *_BSONBuilder) Date(t *time.Time) { bb.Put(&_Date{t, _Null{}}) }
-func (bb *_BSONBuilder) Null()             { bb.Put(Null) }
-func (bb *_BSONBuilder) Regex(regex, options string) {
-	bb.Put(&_Regex{regex, options, _Null{}})
+func (self *_BSONBuilder) Float64(f float64) { self.Put(&_Number{f, _Null{}}) }
+func (self *_BSONBuilder) String(s string)   { self.Put(&_String{s, _Null{}}) }
+func (self *_BSONBuilder) Object()           { self.Put(&_Object{make(map[string]BSON), _Null{}}) }
+func (self *_BSONBuilder) Array()            { self.Put(&_Array{new(vector.Vector), _Null{}}) }
+func (self *_BSONBuilder) Bool(b bool)       { self.Put(&_Boolean{b, _Null{}}) }
+func (self *_BSONBuilder) Date(t *time.Time) { self.Put(&_Date{t, _Null{}}) }
+func (self *_BSONBuilder) Null()             { self.Put(Null) }
+func (self *_BSONBuilder) Regex(regex, options string) {
+	self.Put(&_Regex{regex, options, _Null{}})
 }
-func (bb *_BSONBuilder) Int32(i int32) { bb.Put(&_Int{i, _Null{}}) }
-func (bb *_BSONBuilder) Int64(i int64) { bb.Put(&_Long{i, _Null{}}) }
-func (bb *_BSONBuilder) OID(o []byte)  { bb.Put(&_OID{o, _Null{}}) }
+func (self *_BSONBuilder) Int32(i int32) { self.Put(&_Int{i, _Null{}}) }
+func (self *_BSONBuilder) Int64(i int64) { self.Put(&_Long{i, _Null{}}) }
+func (self *_BSONBuilder) OID(o []byte)  { self.Put(&_OID{o, _Null{}}) }
 
-func (bb *_BSONBuilder) Key(key string) Builder {
+func (self *_BSONBuilder) Key(key string) Builder {
 	bb2 := new(_BSONBuilder)
 
-	switch obj := bb.Get().(type) {
+	switch obj := self.Get().(type) {
 	case *_Object:
 		bb2.obj = obj.value
 		bb2.key = key
@@ -406,9 +407,9 @@ func (bb *_BSONBuilder) Key(key string) Builder {
 	return bb2
 }
 
-func (bb *_BSONBuilder) Elem(i int) Builder {
+func (self *_BSONBuilder) Elem(i int) Builder {
 	bb2 := new(_BSONBuilder)
-	bb2.arr = bb.Get().(*_Array).value
+	bb2.arr = self.Get().(*_Array).value
 	bb2.elem = i
 	for i >= bb2.arr.Len() {
 		bb2.arr.Push(Null)
@@ -416,7 +417,7 @@ func (bb *_BSONBuilder) Elem(i int) Builder {
 	return bb2
 }
 
-func (bb *_BSONBuilder) Flush() {}
+func (self *_BSONBuilder) Flush() {}
 
 func BytesToBSON(b []byte) (BSON, os.Error) {
 	var bson BSON

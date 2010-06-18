@@ -1,4 +1,4 @@
-// Copyright 2009,2010, the 'gomongo' Authors.  All rights reserved.
+// Copyright 2009,2010 The 'gomongo' Authors.  All rights reserved.
 // Use of this source code is governed by the New BSD License
 // that can be found in the LICENSE file.
 
@@ -76,16 +76,16 @@ type deleteMsg struct {
 	requestID          int32
 }
 
-func (d *deleteMsg) OpCode() int32    { return _OP_DELETE }
-func (d *deleteMsg) RequestID() int32 { return d.requestID }
+func (self *deleteMsg) OpCode() int32    { return _OP_DELETE }
+func (self *deleteMsg) RequestID() int32 { return self.requestID }
 
-func (d *deleteMsg) Bytes() []byte {
+func (self *deleteMsg) Bytes() []byte {
 	zero := make([]byte, 4)
 	buf := bytes.NewBuffer(zero)
-	buf.WriteString(d.fullCollectionName)
+	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
 	buf.Write(zero)
-	buf.Write(d.selector.Bytes())
+	buf.Write(self.selector.Bytes())
 	return buf.Bytes()
 
 }
@@ -99,20 +99,20 @@ type getMoreMsg struct {
 	requestID          int32
 }
 
-func (g *getMoreMsg) OpCode() int32    { return _OP_GET_MORE }
-func (g *getMoreMsg) RequestID() int32 { return g.requestID }
+func (self *getMoreMsg) OpCode() int32    { return _OP_GET_MORE }
+func (self *getMoreMsg) RequestID() int32 { return self.requestID }
 
-func (g *getMoreMsg) Bytes() []byte {
+func (self *getMoreMsg) Bytes() []byte {
 	buf := bytes.NewBuffer(make([]byte, 4))
-	buf.WriteString(g.fullCollectionName)
+	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
 
 	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, uint32(g.numberToReturn))
+	binary.LittleEndian.PutUint32(b, uint32(self.numberToReturn))
 	buf.Write(b)
 
 	b = make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uint64(g.cursorID))
+	binary.LittleEndian.PutUint64(b, uint64(self.cursorID))
 	buf.Write(b)
 
 	return buf.Bytes()
@@ -126,14 +126,14 @@ type insertMsg struct {
 	requestID          int32
 }
 
-func (i *insertMsg) OpCode() int32    { return _OP_INSERT }
-func (i *insertMsg) RequestID() int32 { return i.requestID }
+func (self *insertMsg) OpCode() int32    { return _OP_INSERT }
+func (self *insertMsg) RequestID() int32 { return self.requestID }
 
-func (i *insertMsg) Bytes() []byte {
+func (self *insertMsg) Bytes() []byte {
 	buf := bytes.NewBuffer(make([]byte, 4))
-	buf.WriteString(i.fullCollectionName)
+	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
-	buf.Write(i.doc.Bytes())
+	buf.Write(self.doc.Bytes())
 	return buf.Bytes()
 }
 
@@ -145,18 +145,18 @@ type killMsg struct {
 	requestID         int32
 }
 
-func (k *killMsg) OpCode() int32    { return _OP_KILL_CURSORS }
-func (k *killMsg) RequestID() int32 { return k.requestID }
+func (self *killMsg) OpCode() int32    { return _OP_KILL_CURSORS }
+func (self *killMsg) RequestID() int32 { return self.requestID }
 
-func (k *killMsg) Bytes() []byte {
+func (self *killMsg) Bytes() []byte {
 	buf := bytes.NewBuffer(make([]byte, 4))
 
 	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, uint32(k.numberOfCursorIDs))
+	binary.LittleEndian.PutUint32(b, uint32(self.numberOfCursorIDs))
 	buf.Write(b)
 
 	b = make([]byte, 8)
-	for _, id := range k.cursorIDs {
+	for _, id := range self.cursorIDs {
 		binary.LittleEndian.PutUint64(b, uint64(id))
 		buf.Write(b)
 	}
@@ -175,24 +175,24 @@ type queryMsg struct {
 	requestID          int32
 }
 
-func (q *queryMsg) OpCode() int32    { return _OP_QUERY }
-func (q *queryMsg) RequestID() int32 { return q.requestID }
+func (self *queryMsg) OpCode() int32    { return _OP_QUERY }
+func (self *queryMsg) RequestID() int32 { return self.requestID }
 
-func (q *queryMsg) Bytes() []byte {
+func (self *queryMsg) Bytes() []byte {
 	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, uint32(q.opts))
+	binary.LittleEndian.PutUint32(b, uint32(self.opts))
 
 	buf := bytes.NewBuffer(b)
-	buf.WriteString(q.fullCollectionName)
+	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
 
-	binary.LittleEndian.PutUint32(b, uint32(q.numberToSkip))
+	binary.LittleEndian.PutUint32(b, uint32(self.numberToSkip))
 	buf.Write(b)
 
-	binary.LittleEndian.PutUint32(b, uint32(q.numberToReturn))
+	binary.LittleEndian.PutUint32(b, uint32(self.numberToReturn))
 	buf.Write(b)
 
-	buf.Write(q.query.Bytes())
+	buf.Write(self.query.Bytes())
 	return buf.Bytes()
 }
 
@@ -205,20 +205,20 @@ type updateMsg struct {
 	requestID          int32
 }
 
-func (u *updateMsg) OpCode() int32    { return _OP_UPDATE }
-func (u *updateMsg) RequestID() int32 { return u.requestID }
+func (self *updateMsg) OpCode() int32    { return _OP_UPDATE }
+func (self *updateMsg) RequestID() int32 { return self.requestID }
 
-func (u *updateMsg) Bytes() []byte {
+func (self *updateMsg) Bytes() []byte {
 	buf := bytes.NewBuffer(make([]byte, 4))
-	buf.WriteString(u.fullCollectionName)
+	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
 
 	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, uint32(u.flags))
+	binary.LittleEndian.PutUint32(b, uint32(self.flags))
 	buf.Write(b)
 
-	buf.Write(u.selector.Bytes())
-	buf.Write(u.document.Bytes())
+	buf.Write(self.selector.Bytes())
+	buf.Write(self.document.Bytes())
 
 	return buf.Bytes()
 }
@@ -236,10 +236,10 @@ type replyMsg struct {
 	docs           *vector.Vector
 }
 
-func (c *Connection) readReply() (*replyMsg, os.Error) {
-	size_bits, _ := ioutil.ReadAll(io.LimitReader(c.conn, 4))
+func (self *Connection) readReply() (*replyMsg, os.Error) {
+	size_bits, _ := ioutil.ReadAll(io.LimitReader(self.conn, 4))
 	size := binary.LittleEndian.Uint32(size_bits)
-	rest, _ := ioutil.ReadAll(io.LimitReader(c.conn, int64(size)-4))
+	rest, _ := ioutil.ReadAll(io.LimitReader(self.conn, int64(size)-4))
 	reply := parseReply(rest)
 	return reply, nil
 }

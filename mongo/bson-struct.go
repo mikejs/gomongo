@@ -1,8 +1,9 @@
 // Based on the Go json package.
-// Original Copyright 2009 The Go Authors. All rights reserved.
-// Modifications Copyright 2009 Michael Stephens.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE and LICENSE.GO files.
+
+// Copyright 2009 The Go Authors.  All rights reserved.
+// Copyright 2009,2010 The 'gomongo' Authors.  All rights reserved.
+// Use of this source code is governed by the New BSD License
+// that can be found in the LICENSE and LICENSE.GO files.
 
 package mongo
 
@@ -70,22 +71,22 @@ func setint(v reflect.Value, i int64) {
 	}
 }
 
-// If updating b.val is not enough to update the original,
-// copy a changed b.val out to the original.
-func (b *structBuilder) Flush() {
-	if b == nil {
+// If updating self.val is not enough to update the original,
+// copy a changed self.val out to the original.
+func (self *structBuilder) Flush() {
+	if self == nil {
 		return
 	}
-	if b.map_ != nil {
-		b.map_.SetElem(b.key, b.val)
+	if self.map_ != nil {
+		self.map_.SetElem(self.key, self.val)
 	}
 }
 
-func (b *structBuilder) Int64(i int64) {
-	if b == nil {
+func (self *structBuilder) Int64(i int64) {
+	if self == nil {
 		return
 	}
-	v := b.val
+	v := self.val
 	if isfloat(v) {
 		setfloat(v, float64(i))
 	} else {
@@ -93,20 +94,20 @@ func (b *structBuilder) Int64(i int64) {
 	}
 }
 
-func (b *structBuilder) Date(t *time.Time) {
-	if b == nil {
+func (self *structBuilder) Date(t *time.Time) {
+	if self == nil {
 		return
 	}
-	if v, ok := b.val.(*reflect.PtrValue); ok {
+	if v, ok := self.val.(*reflect.PtrValue); ok {
 		v.PointTo(reflect.Indirect(reflect.NewValue(t)))
 	}
 }
 
-func (b *structBuilder) Int32(i int32) {
-	if b == nil {
+func (self *structBuilder) Int32(i int32) {
+	if self == nil {
 		return
 	}
-	v := b.val
+	v := self.val
 	if isfloat(v) {
 		setfloat(v, float64(i))
 	} else {
@@ -114,11 +115,11 @@ func (b *structBuilder) Int32(i int32) {
 	}
 }
 
-func (b *structBuilder) Float64(f float64) {
-	if b == nil {
+func (self *structBuilder) Float64(f float64) {
+	if self == nil {
 		return
 	}
-	v := b.val
+	v := self.val
 	if isfloat(v) {
 		setfloat(v, f)
 	} else {
@@ -126,41 +127,41 @@ func (b *structBuilder) Float64(f float64) {
 	}
 }
 
-func (b *structBuilder) Null() {}
+func (self *structBuilder) Null() {}
 
-func (b *structBuilder) String(s string) {
-	if b == nil {
+func (self *structBuilder) String(s string) {
+	if self == nil {
 		return
 	}
-	if v, ok := b.val.(*reflect.StringValue); ok {
+	if v, ok := self.val.(*reflect.StringValue); ok {
 		v.Set(s)
 	}
 }
 
-func (b *structBuilder) Regex(regex, options string) {
+func (self *structBuilder) Regex(regex, options string) {
 	// Ignore options for now...
-	if b == nil {
+	if self == nil {
 		return
 	}
-	if v, ok := b.val.(*reflect.StringValue); ok {
+	if v, ok := self.val.(*reflect.StringValue); ok {
 		v.Set(regex)
 	}
 }
 
-func (b *structBuilder) Bool(tf bool) {
-	if b == nil {
+func (self *structBuilder) Bool(tf bool) {
+	if self == nil {
 		return
 	}
-	if v, ok := b.val.(*reflect.BoolValue); ok {
+	if v, ok := self.val.(*reflect.BoolValue); ok {
 		v.Set(tf)
 	}
 }
 
-func (b *structBuilder) OID(oid []byte) {
-	if b == nil {
+func (self *structBuilder) OID(oid []byte) {
+	if self == nil {
 		return
 	}
-	if v, ok := b.val.(*reflect.SliceValue); ok {
+	if v, ok := self.val.(*reflect.SliceValue); ok {
 		if v.Cap() < 12 {
 			nv := reflect.MakeSlice(v.Type().(*reflect.SliceType), 12, 12)
 			v.Set(nv)
@@ -171,22 +172,22 @@ func (b *structBuilder) OID(oid []byte) {
 	}
 }
 
-func (b *structBuilder) Array() {
-	if b == nil {
+func (self *structBuilder) Array() {
+	if self == nil {
 		return
 	}
-	if v, ok := b.val.(*reflect.SliceValue); ok {
+	if v, ok := self.val.(*reflect.SliceValue); ok {
 		if v.IsNil() {
 			v.Set(reflect.MakeSlice(v.Type().(*reflect.SliceType), 0, 8))
 		}
 	}
 }
 
-func (b *structBuilder) Elem(i int) Builder {
-	if b == nil || i < 0 {
+func (self *structBuilder) Elem(i int) Builder {
+	if self == nil || i < 0 {
 		return nobuilder
 	}
-	switch v := b.val.(type) {
+	switch v := self.val.(type) {
 	case *reflect.ArrayValue:
 		if i < v.Len() {
 			return &structBuilder{val: v.Elem(i)}
@@ -214,28 +215,28 @@ func (b *structBuilder) Elem(i int) Builder {
 	return nobuilder
 }
 
-func (b *structBuilder) Object() {
-	if b == nil {
+func (self *structBuilder) Object() {
+	if self == nil {
 		return
 	}
-	if v, ok := b.val.(*reflect.PtrValue); ok && v.IsNil() {
+	if v, ok := self.val.(*reflect.PtrValue); ok && v.IsNil() {
 		if v.IsNil() {
 			v.PointTo(reflect.MakeZero(v.Type().(*reflect.PtrType).Elem()))
-			b.Flush()
+			self.Flush()
 		}
-		b.map_ = nil
-		b.val = v.Elem()
+		self.map_ = nil
+		self.val = v.Elem()
 	}
-	if v, ok := b.val.(*reflect.MapValue); ok && v.IsNil() {
+	if v, ok := self.val.(*reflect.MapValue); ok && v.IsNil() {
 		v.Set(reflect.MakeMap(v.Type().(*reflect.MapType)))
 	}
 }
 
-func (b *structBuilder) Key(k string) Builder {
-	if b == nil {
+func (self *structBuilder) Key(k string) Builder {
+	if self == nil {
 		return nobuilder
 	}
-	switch v := reflect.Indirect(b.val).(type) {
+	switch v := reflect.Indirect(self.val).(type) {
 	case *reflect.StructValue:
 		t := v.Type().(*reflect.StructType)
 		// Case-insensitive field lookup.
