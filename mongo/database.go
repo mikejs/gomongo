@@ -32,15 +32,9 @@ func (db *Database) Drop() os.Error {
 func (db *Database) Repair(preserveClonedFilesOnFailure, backupOriginalFiles bool) os.Error {
 	cmd := &_Object{
 		map[string]BSON{
-			"repairDatabase": &_Number{
-				1, _Null{},
-			},
-			"preserveClonedFilesOnFailure": &_Boolean{
-				preserveClonedFilesOnFailure, _Null{},
-			},
-			"backupOriginalFiles": &_Boolean{
-				backupOriginalFiles, _Null{},
-			},
+			"repairDatabase":               &_Number{1, _Null{}},
+			"preserveClonedFilesOnFailure": &_Boolean{preserveClonedFilesOnFailure, _Null{}},
+			"backupOriginalFiles":          &_Boolean{backupOriginalFiles, _Null{}},
 		},
 		_Null{},
 	}
