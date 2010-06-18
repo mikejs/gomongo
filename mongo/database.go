@@ -1,4 +1,4 @@
-// Copyright 2009,2010, the 'gomongo' Authors.  All rights reserved.
+// Copyright 2009,2010 The 'gomongo' Authors.  All rights reserved.
 // Use of this source code is governed by the New BSD License
 // that can be found in the LICENSE file.
 
@@ -15,21 +15,21 @@ type Database struct {
 	name string
 }
 
-func (c *Connection) GetDB(name string) *Database {
-	return &Database{c, name}
+func (self *Database) GetCollection(name string) *Collection {
+	return &Collection{self, name}
 }
 
-func (db *Database) Drop() os.Error {
+func (self *Database) Drop() os.Error {
 	cmd, err := Marshal(map[string]int{"dropDatabase": 1})
 	if err != nil {
 		return err
 	}
 
-	_, err = db.Command(cmd)
+	_, err = self.Command(cmd)
 	return err
 }
 
-func (db *Database) Repair(preserveClonedFilesOnFailure, backupOriginalFiles bool) os.Error {
+func (self *Database) Repair(preserveClonedFilesOnFailure, backupOriginalFiles bool) os.Error {
 	cmd := &_Object{
 		map[string]BSON{
 			"repairDatabase":               &_Number{1, _Null{}},
@@ -39,16 +39,16 @@ func (db *Database) Repair(preserveClonedFilesOnFailure, backupOriginalFiles boo
 		_Null{},
 	}
 
-	_, err := db.Command(cmd)
+	_, err := self.Command(cmd)
 	return err
 }
 
-func (db *Database) Command(cmd BSON) (BSON, os.Error) {
-	coll := db.GetCollection("$cmd")
+func (self *Database) Command(cmd BSON) (BSON, os.Error) {
+	coll := self.GetCollection("$cmd")
 	return coll.FindOne(cmd)
 }
 
-func (db *Database) GetCollectionNames() *vector.StringVector {
+func (self *Database) GetCollectionNames() *vector.StringVector {
 	return new(vector.StringVector)
 }
 

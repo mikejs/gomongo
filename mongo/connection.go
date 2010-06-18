@@ -1,4 +1,4 @@
-// Copyright 2009,2010, the 'gomongo' Authors.  All rights reserved.
+// Copyright 2009,2010 The 'gomongo' Authors.  All rights reserved.
 // Use of this source code is governed by the New BSD License
 // that can be found in the LICENSE file.
 
@@ -54,14 +54,18 @@ func (self *Connection) Disconnect() os.Error {
 	return nil
 }
 
-func (c *Connection) writeMessage(m message) os.Error {
+func (self *Connection) writeMessage(m message) os.Error {
 	body := m.Bytes()
-	hb := header(msgHeader{int32(len(body)+16), m.RequestID(), 0, m.OpCode()})
+	hb := header(msgHeader{int32(len(body) + 16), m.RequestID(), 0, m.OpCode()})
 	msg := bytes.Add(hb, body)
 
-	_, err := c.conn.Write(msg)
+	_, err := self.conn.Write(msg)
 
 	last_req = m.RequestID()
 	return err
+}
+
+func (self *Connection) GetDB(name string) *Database {
+	return &Database{self, name}
 }
 
