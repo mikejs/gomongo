@@ -38,12 +38,21 @@ var last_req int32
 // *** Standard Message Header
 // ***
 
-func header(length, reqID, respTo, opCode int32) []byte {
+type msgHeader struct {
+	messageLength int32 // total message size, including this
+	requestID     int32 // identifier for this message
+	responseTo    int32 // requestID from the original request (used in reponses from db)
+	opCode        int32 // request type - see Request Opcodes
+}
+
+func header(h msgHeader) []byte {
 	b := make([]byte, 16)
-	binary.LittleEndian.PutUint32(b[0:4], uint32(length))
-	binary.LittleEndian.PutUint32(b[4:8], uint32(reqID))
-	binary.LittleEndian.PutUint32(b[8:12], uint32(respTo))
-	binary.LittleEndian.PutUint32(b[12:16], uint32(opCode))
+
+	binary.LittleEndian.PutUint32(b[0:4], uint32(h.messageLength))
+	binary.LittleEndian.PutUint32(b[4:8], uint32(h.requestID))
+	binary.LittleEndian.PutUint32(b[8:12], uint32(h.responseTo))
+	binary.LittleEndian.PutUint32(b[12:16], uint32(h.opCode))
+
 	return b
 }
 
