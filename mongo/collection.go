@@ -106,7 +106,14 @@ func (coll *Collection) FindOne(query BSON) (BSON, os.Error) {
 }
 
 func (coll *Collection) Count(query BSON) (int64, os.Error) {
-	cmd := &_Object{map[string]BSON{"count": &_String{coll.name, _Null{}}, "query": query}, _Null{}}
+	cmd := &_Object{
+		map[string]BSON{
+			"count": &_String{coll.name, _Null{}},
+			"query": query,
+		},
+		_Null{},
+	}
+
 	reply, err := coll.db.Command(cmd)
 	if err != nil {
 		return -1, err
