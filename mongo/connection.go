@@ -5,6 +5,7 @@
 package mongo
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"os"
@@ -35,14 +36,6 @@ func ConnectByAddr(addr *net.TCPAddr) (*Connection, os.Error) {
 	return &Connection{addr, conn}, nil
 }
 
-/* Disconnects the conection from MongoDB. */
-func (self *Connection) Disconnect() os.Error {
-	if err := self.conn.Close(); err != nil {
-		return err
-	}
-	return nil
-}
-
 /* Reconnects using the same address `Addr`. */
 func (self *Connection) Reconnect() (*Connection, os.Error) {
 	connection, err := ConnectByAddr(self.Addr)
@@ -51,5 +44,24 @@ func (self *Connection) Reconnect() (*Connection, os.Error) {
 	}
 
 	return connection, nil
+}
+
+/* Disconnects the conection from MongoDB. */
+func (self *Connection) Disconnect() os.Error {
+	if err := self.conn.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Connection) writeMessage(m message) os.Error {
+	body := m.Bytes()
+	hb := header(int32(len(body)+16), m.RequestID(), 0, m.OpCode())
+	msg := bytes.Add(hb, body)
+
+	_, err := c.conn.Write(msg)
+
+	last_req = m.RequestID()
+	return err
 }
 
