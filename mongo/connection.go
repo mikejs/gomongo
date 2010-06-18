@@ -56,7 +56,7 @@ func (self *Connection) Disconnect() os.Error {
 
 func (c *Connection) writeMessage(m message) os.Error {
 	body := m.Bytes()
-	hb := header(int32(len(body)+16), m.RequestID(), 0, m.OpCode())
+	hb := header(msgHeader{int32(len(body)+16), m.RequestID(), 0, m.OpCode()})
 	msg := bytes.Add(hb, body)
 
 	_, err := c.conn.Write(msg)
