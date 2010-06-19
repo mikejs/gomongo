@@ -12,7 +12,6 @@ package mongo
 import (
 	"bytes"
 	"container/vector"
-	"encoding/binary"
 	"io"
 	"io/ioutil"
 	"os"
@@ -50,10 +49,10 @@ type msgHeader struct {
 func header(h msgHeader) []byte {
 	b := make([]byte, 16)
 
-	binary.LittleEndian.PutUint32(b[0:4], uint32(h.messageLength))
-	binary.LittleEndian.PutUint32(b[4:8], uint32(h.requestID))
-	binary.LittleEndian.PutUint32(b[8:12], uint32(h.responseTo))
-	binary.LittleEndian.PutUint32(b[12:16], uint32(h.opCode))
+	pack.PutUint32(b[0:4], uint32(h.messageLength))
+	pack.PutUint32(b[4:8], uint32(h.requestID))
+	pack.PutUint32(b[8:12], uint32(h.responseTo))
+	pack.PutUint32(b[12:16], uint32(h.opCode))
 
 	return b
 }
@@ -105,7 +104,7 @@ func (self *opUpdate) Bytes() []byte {
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
 
-	binary.LittleEndian.PutUint32(b, uint32(self.flags))
+	pack.PutUint32(b, uint32(self.flags))
 	buf.Write(b)
 
 	buf.Write(self.selector.Bytes())
@@ -171,16 +170,16 @@ func (self *opQuery) Bytes() []byte {
 	var buf bytes.Buffer
 	b := make([]byte, 4)
 
-	binary.LittleEndian.PutUint32(b, uint32(self.opts))
+	pack.PutUint32(b, uint32(self.opts))
 	buf.Write(b)
 
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
 
-	binary.LittleEndian.PutUint32(b, uint32(self.numberToSkip))
+	pack.PutUint32(b, uint32(self.numberToSkip))
 	buf.Write(b)
 
-	binary.LittleEndian.PutUint32(b, uint32(self.numberToReturn))
+	pack.PutUint32(b, uint32(self.numberToReturn))
 	buf.Write(b)
 
 	buf.Write(self.query.Bytes())
@@ -215,11 +214,11 @@ func (self *opGetMore) Bytes() []byte {
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
 
-	binary.LittleEndian.PutUint32(b, uint32(self.numberToReturn))
+	pack.PutUint32(b, uint32(self.numberToReturn))
 	buf.Write(b)
 
 	b = make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uint64(self.cursorID))
+	pack.PutUint64(b, uint64(self.cursorID))
 	buf.Write(b)
 
 	return buf.Bytes()
@@ -280,12 +279,12 @@ func (self *opKillCursors) Bytes() []byte {
 	b := make([]byte, 4)
 	buf := bytes.NewBuffer(b) // _ZERO
 
-	binary.LittleEndian.PutUint32(b, uint32(self.numberOfCursorIDs))
+	pack.PutUint32(b, uint32(self.numberOfCursorIDs))
 	buf.Write(b)
 
 	b = make([]byte, 8)
 	for _, id := range self.cursorIDs {
-		binary.LittleEndian.PutUint64(b, uint64(id))
+		pack.PutUint64(b, uint64(id))
 		buf.Write(b)
 	}
 
@@ -318,7 +317,7 @@ type opReply struct {
 
 func (self *Connection) readReply() (*opReply, os.Error) {
 	size_bits, _ := ioutil.ReadAll(io.LimitReader(self.conn, 4))
-	size := binary.LittleEndian.Uint32(size_bits)
+	size := pack.Uint32(size_bits)
 	rest, _ := ioutil.ReadAll(io.LimitReader(self.conn, int64(size)-4))
 	reply := parseReply(rest)
 	return reply, nil
@@ -326,11 +325,11 @@ func (self *Connection) readReply() (*opReply, os.Error) {
 
 func parseReply(b []byte) *opReply {
 	r := new(opReply)
-	r.responseTo = int32(binary.LittleEndian.Uint32(b[4:8]))
-	r.responseFlag = int32(binary.LittleEndian.Uint32(b[12:16]))
-	r.cursorID = int64(binary.LittleEndian.Uint64(b[16:24]))
-	r.startingFrom = int32(binary.LittleEndian.Uint32(b[24:28]))
-	r.numberReturned = int32(binary.LittleEndian.Uint32(b[28:32]))
+	r.responseTo = int32(pack.Uint32(b[4:8]))
+	r.responseFlag = int32(pack.Uint32(b[12:16]))
+	r.cursorID = int64(pack.Uint64(b[16:24]))
+	r.startingFrom = int32(pack.Uint32(b[24:28]))
+	r.numberReturned = int32(pack.Uint32(b[28:32]))
 	r.docs = new(vector.Vector)
 
 	if r.numberReturned > 0 {
