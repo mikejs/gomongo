@@ -1,4 +1,4 @@
-// Copyright 2009,2010 The 'gomongo' Authors.  All rights reserved.
+// Copyright 2010 The 'gomongo' Authors.  All rights reserved.
 // Use of this source code is governed by the New BSD License
 // that can be found in the LICENSE file.
 
@@ -13,6 +13,8 @@ import (
 
 // Like BSON documents, all data in the mongo wire protocol is little-endian.
 var pack = binary.LittleEndian
+
+var lastRequestID int32
 
 
 func init() {
@@ -32,8 +34,17 @@ func init() {
 // *** Utility functions
 // ***
 
-func randToi32() int32 {
-	return rand.Int31()
+/* Gets a random request identifier different to the last one.
+ */
+func getRequestID() int32 {
+	id := rand.Int31()
+
+	if id == lastRequestID {
+		return getRequestID()
+	}
+	lastRequestID = id
+
+	return id
 }
 
 // *** Bits data
