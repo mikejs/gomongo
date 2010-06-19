@@ -16,7 +16,6 @@ import (
 	"time"
 	"bytes"
 	"strconv"
-	"encoding/binary"
 	"container/vector"
 )
 
@@ -90,7 +89,7 @@ func (self *_Number) Number() float64 { return self.value }
 func (self *_Number) Bytes() []byte {
 	bits := math.Float64bits(self.value)
 	b := []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	binary.LittleEndian.PutUint64(b, bits)
+	pack.PutUint64(b, bits)
 	return b
 }
 
@@ -104,7 +103,7 @@ func (self *_String) String() string { return self.value }
 func (self *_String) Bytes() []byte {
 	b := []byte{0, 0, 0, 0}
 	l := len(self.value) + 1
-	binary.LittleEndian.PutUint32(b, uint32(l))
+	pack.PutUint32(b, uint32(l))
 
 	buf := bytes.NewBuffer(b)
 	buf.WriteString(self.value)
@@ -144,7 +143,7 @@ func (self *_Object) Bytes() []byte {
 
 	l := buf.Len() + 4
 	b := []byte{0, 0, 0, 0}
-	binary.LittleEndian.PutUint32(b, uint32(l))
+	pack.PutUint32(b, uint32(l))
 	return bytes.Add(b, buf.Bytes())
 }
 
@@ -182,7 +181,7 @@ func (self *_Array) Bytes() []byte {
 
 	l := buf.Len() + 4
 	b := []byte{0, 0, 0, 0}
-	binary.LittleEndian.PutUint32(b, uint32(l))
+	pack.PutUint32(b, uint32(l))
 	return bytes.Add(b, buf.Bytes())
 }
 
@@ -219,7 +218,7 @@ func (self *_Date) Date() *time.Time { return self.value }
 func (self *_Date) Bytes() []byte {
 	b := []byte{0, 0, 0, 0, 0, 0, 0, 0}
 	mtime := self.value.Seconds() * 1000
-	binary.LittleEndian.PutUint64(b, uint64(mtime))
+	pack.PutUint64(b, uint64(mtime))
 	return b
 }
 
@@ -247,7 +246,7 @@ func (self *_Int) Kind() int  { return IntKind }
 func (self *_Int) Int() int32 { return self.value }
 func (self *_Int) Bytes() []byte {
 	b := []byte{0, 0, 0, 0}
-	binary.LittleEndian.PutUint32(b, uint32(self.value))
+	pack.PutUint32(b, uint32(self.value))
 	return b
 }
 
@@ -260,7 +259,7 @@ func (self *_Long) Kind() int   { return LongKind }
 func (self *_Long) Long() int64 { return self.value }
 func (self *_Long) Bytes() []byte {
 	b := []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	binary.LittleEndian.PutUint64(b, uint64(self.value))
+	pack.PutUint64(b, uint64(self.value))
 	return b
 }
 
@@ -450,12 +449,12 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 		case NumberKind:
 			lr := io.LimitReader(buf, 8)
 			bits, _ := ioutil.ReadAll(lr)
-			ui64 := binary.LittleEndian.Uint64(bits)
+			ui64 := pack.Uint64(bits)
 			fl64 := math.Float64frombits(ui64)
 			b2.Float64(fl64)
 		case StringKind:
 			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 4))
-			l := binary.LittleEndian.Uint32(bits)
+			l := pack.Uint32(bits)
 			s, _ := ioutil.ReadAll(io.LimitReader(buf, int64(l-1)))
 			buf.ReadByte()
 			b2.String(string(s))
@@ -479,7 +478,7 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 			}
 		case DateKind:
 			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 8))
-			ui64 := binary.LittleEndian.Uint64(bits)
+			ui64 := pack.Uint64(bits)
 			b2.Date(time.SecondsToUTC(int64(ui64) / 1000))
 		case RegexKind:
 			regex := readCString(buf)
@@ -487,11 +486,11 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 			b2.Regex(regex, options)
 		case IntKind:
 			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 4))
-			ui32 := binary.LittleEndian.Uint32(bits)
+			ui32 := pack.Uint32(bits)
 			b2.Int32(int32(ui32))
 		case LongKind:
 			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 8))
-			ui64 := binary.LittleEndian.Uint64(bits)
+			ui64 := pack.Uint64(bits)
 			b2.Int64(int64(ui64))
 		default:
 			err = os.NewError(fmt.Sprintf("don't know how to handle kind %v yet", kind))
