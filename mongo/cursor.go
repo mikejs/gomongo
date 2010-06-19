@@ -5,9 +5,8 @@
 package mongo
 
 import (
-	"os"
-	"rand"
 	"container/vector"
+	"os"
 )
 
 
@@ -45,9 +44,9 @@ func (self *Cursor) GetMore() os.Error {
 		return os.NewError("no cursorID")
 	}
 
-	gm := &opGetMore{self.collection.fullName(), 0, self.id, rand.Int31()}
+	gm := &opGetMore{self.collection.fullName(), 0, self.id}
 	conn := self.collection.db.Conn
-	err := conn.writeMessage(gm)
+	err := conn.writeOp(gm)
 	if err != nil {
 		return err
 	}
@@ -69,9 +68,8 @@ func (self *Cursor) Close() os.Error {
 		return nil
 	}
 
-	req_id := rand.Int31()
-	km := &opKillCursors{1, []int64{self.id}, req_id}
+	km := &opKillCursors{1, []int64{self.id}}
 	conn := self.collection.db.Conn
-	return conn.writeMessage(km)
+	return conn.writeOp(km)
 }
 

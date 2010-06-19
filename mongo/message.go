@@ -33,8 +33,6 @@ const (
 	_OP_KILL_CURSORS = 2007 // Tell database client is done with a cursor
 )
 
-var last_req int32
-
 
 // *** Standard Message Header
 // ***
@@ -63,7 +61,6 @@ func header(h msgHeader) []byte {
 
 type message interface {
 	Bytes() []byte
-	RequestID() int32
 	OpCode() int32
 }
 
@@ -91,11 +88,10 @@ type opUpdate struct {
 	fullCollectionName string
 	flags              int32
 	selector, document BSON
-	requestID          int32
+
 }
 
 func (self *opUpdate) OpCode() int32    { return _OP_UPDATE }
-func (self *opUpdate) RequestID() int32 { return self.requestID }
 
 func (self *opUpdate) Bytes() []byte {
 	b := make([]byte, 4)
@@ -125,11 +121,9 @@ type opInsert struct {
 type opInsert struct {
 	fullCollectionName string
 	doc                BSON
-	requestID          int32
 }
 
 func (self *opInsert) OpCode() int32    { return _OP_INSERT }
-func (self *opInsert) RequestID() int32 { return self.requestID }
 
 func (self *opInsert) Bytes() []byte {
 	buf := bytes.NewBuffer(make([]byte, 4)) // _ZERO
@@ -160,11 +154,9 @@ type opQuery struct {
 	numberToSkip       int32
 	numberToReturn     int32
 	query              BSON
-	requestID          int32
 }
 
 func (self *opQuery) OpCode() int32    { return _OP_QUERY }
-func (self *opQuery) RequestID() int32 { return self.requestID }
 
 func (self *opQuery) Bytes() []byte {
 	var buf bytes.Buffer
@@ -201,11 +193,9 @@ type opGetMore struct {
 	fullCollectionName string
 	numberToReturn     int32
 	cursorID           int64
-	requestID          int32
 }
 
 func (self *opGetMore) OpCode() int32    { return _OP_GET_MORE }
-func (self *opGetMore) RequestID() int32 { return self.requestID }
 
 func (self *opGetMore) Bytes() []byte {
 	b := make([]byte, 4)
@@ -237,11 +227,9 @@ type opDelete struct {
 type opDelete struct {
 	fullCollectionName string
 	selector           BSON
-	requestID          int32
 }
 
 func (self *opDelete) OpCode() int32    { return _OP_DELETE }
-func (self *opDelete) RequestID() int32 { return self.requestID }
 
 func (self *opDelete) Bytes() []byte {
 	b := make([]byte, 4)
@@ -269,11 +257,9 @@ func (self *opDelete) Bytes() []byte {
 type opKillCursors struct {
 	numberOfCursorIDs int32
 	cursorIDs         []int64
-	requestID         int32
 }
 
 func (self *opKillCursors) OpCode() int32    { return _OP_KILL_CURSORS }
-func (self *opKillCursors) RequestID() int32 { return self.requestID }
 
 func (self *opKillCursors) Bytes() []byte {
 	b := make([]byte, 4)
@@ -346,20 +332,5 @@ func parseReply(b []byte) *opReply {
 	}
 
 	return r
-}
-
-
-// *** Utility
-// ***
-
-func (self *Connection) writeMessage(m message) os.Error {
-	body := m.Bytes()
-	h := header(msgHeader{int32(len(body) + 16), m.RequestID(), 0, m.OpCode()})
-
-	msg := bytes.Add(h, body)
-	_, err := self.conn.Write(msg)
-
-	last_req = m.RequestID()
-	return err
 }
 

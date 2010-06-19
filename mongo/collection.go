@@ -5,8 +5,8 @@
 package mongo
 
 import (
+	"bytes"
 	"os"
-	"rand"
 )
 
 
@@ -59,21 +59,21 @@ func (self *Collection) Drop() os.Error {
 }
 
 func (self *Collection) Insert(doc BSON) os.Error {
-	im := &opInsert{self.fullName(), doc, rand.Int31()}
-	return self.db.Conn.writeMessage(im)
+	im := &opInsert{self.fullName(), doc}
+	return self.db.Conn.writeOp(im)
 }
 
 func (self *Collection) Remove(selector BSON) os.Error {
-	dm := &opDelete{self.fullName(), selector, rand.Int31()}
-	return self.db.Conn.writeMessage(dm)
+	dm := &opDelete{self.fullName(), selector}
+	return self.db.Conn.writeOp(dm)
 }
 
 func (self *Collection) Query(query BSON, skip, limit int) (*Cursor, os.Error) {
-	req_id := rand.Int31()
+	reqID := getRequestID()
 	conn := self.db.Conn
-	qm := &opQuery{0, self.fullName(), int32(skip), int32(limit), query, req_id}
+	qm := &opQuery{0, self.fullName(), int32(skip), int32(limit), query}
 
-	err := conn.writeMessage(qm)
+	err := conn.writeOpQuery(qm, reqID)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (self *Collection) Query(query BSON, skip, limit int) (*Cursor, os.Error) {
 	if err != nil {
 		return nil, err
 	}
-	if reply.responseTo != req_id {
+	if reply.responseTo != reqID {
 		return nil, os.NewError("wrong responseTo code")
 	}
 
@@ -119,25 +119,48 @@ func (self *Collection) Count(query BSON) (int64, os.Error) {
 }
 
 func (self *Collection) update(um *opUpdate) os.Error {
-	um.requestID = rand.Int31()
 	conn := self.db.Conn
 
-	return conn.writeMessage(um)
+	return conn.writeOp(um)
 }
 
 func (self *Collection) Update(selector, document BSON) os.Error {
-	return self.update(&opUpdate{self.fullName(), 0, selector, document, 0})
+	return self.update(&opUpdate{self.fullName(), 0, selector, document})
 }
 
 func (self *Collection) Upsert(selector, document BSON) os.Error {
-	return self.update(&opUpdate{self.fullName(), 1, selector, document, 0})
+	return self.update(&opUpdate{self.fullName(), 1, selector, document})
 }
 
 func (self *Collection) UpdateAll(selector, document BSON) os.Error {
-	return self.update(&opUpdate{self.fullName(), 2, selector, document, 0})
+	return self.update(&opUpdate{self.fullName(), 2, selector, document})
 }
 
 func (self *Collection) UpsertAll(selector, document BSON) os.Error {
-	return self.update(&opUpdate{self.fullName(), 3, selector, document, 0})
+	return self.update(&opUpdate{self.fullName(), 3, selector, document})
+}
+
+
+// *** Utility
+// ***
+
+func (self *Connection) writeOp(m message) os.Error {
+	body := m.Bytes()
+	h := header(msgHeader{int32(len(body) + 16), getRequestID(), 0, m.OpCode()})
+
+	msg := bytes.Add(h, body)
+	_, err := self.conn.Write(msg)
+
+	return err
+}
+
+func (self *Connection) writeOpQuery(m message, reqID int32) os.Error {
+	body := m.Bytes()
+	h := header(msgHeader{int32(len(body) + 16), reqID, 0, m.OpCode()})
+
+	msg := bytes.Add(h, body)
+	_, err := self.conn.Write(msg)
+
+	return err
 }
 
