@@ -59,19 +59,19 @@ func (self *Collection) Drop() os.Error {
 }
 
 func (self *Collection) Insert(doc BSON) os.Error {
-	im := &insertMsg{self.fullName(), doc, rand.Int31()}
+	im := &opInsert{self.fullName(), doc, rand.Int31()}
 	return self.db.Conn.writeMessage(im)
 }
 
 func (self *Collection) Remove(selector BSON) os.Error {
-	dm := &deleteMsg{self.fullName(), selector, rand.Int31()}
+	dm := &opDelete{self.fullName(), selector, rand.Int31()}
 	return self.db.Conn.writeMessage(dm)
 }
 
 func (self *Collection) Query(query BSON, skip, limit int) (*Cursor, os.Error) {
 	req_id := rand.Int31()
 	conn := self.db.Conn
-	qm := &queryMsg{0, self.fullName(), int32(skip), int32(limit), query, req_id}
+	qm := &opQuery{0, self.fullName(), int32(skip), int32(limit), query, req_id}
 
 	err := conn.writeMessage(qm)
 	if err != nil {
@@ -118,25 +118,26 @@ func (self *Collection) Count(query BSON) (int64, os.Error) {
 	return int64(reply.Get("n").Number()), nil
 }
 
-func (self *Collection) update(um *updateMsg) os.Error {
+func (self *Collection) update(um *opUpdate) os.Error {
 	um.requestID = rand.Int31()
 	conn := self.db.Conn
+
 	return conn.writeMessage(um)
 }
 
 func (self *Collection) Update(selector, document BSON) os.Error {
-	return self.update(&updateMsg{self.fullName(), 0, selector, document, 0})
+	return self.update(&opUpdate{self.fullName(), 0, selector, document, 0})
 }
 
 func (self *Collection) Upsert(selector, document BSON) os.Error {
-	return self.update(&updateMsg{self.fullName(), 1, selector, document, 0})
+	return self.update(&opUpdate{self.fullName(), 1, selector, document, 0})
 }
 
 func (self *Collection) UpdateAll(selector, document BSON) os.Error {
-	return self.update(&updateMsg{self.fullName(), 2, selector, document, 0})
+	return self.update(&opUpdate{self.fullName(), 2, selector, document, 0})
 }
 
 func (self *Collection) UpsertAll(selector, document BSON) os.Error {
-	return self.update(&updateMsg{self.fullName(), 3, selector, document, 0})
+	return self.update(&opUpdate{self.fullName(), 3, selector, document, 0})
 }
 

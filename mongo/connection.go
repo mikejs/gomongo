@@ -5,7 +5,6 @@
 package mongo
 
 import (
-	"bytes"
 	"fmt"
 	"net"
 	"os"
@@ -52,17 +51,6 @@ func (self *Connection) Disconnect() os.Error {
 		return err
 	}
 	return nil
-}
-
-func (self *Connection) writeMessage(m message) os.Error {
-	body := m.Bytes()
-	hb := header(msgHeader{int32(len(body) + 16), m.RequestID(), 0, m.OpCode()})
-	msg := bytes.Add(hb, body)
-
-	_, err := self.conn.Write(msg)
-
-	last_req = m.RequestID()
-	return err
 }
 
 func (self *Connection) GetDB(name string) *Database {
