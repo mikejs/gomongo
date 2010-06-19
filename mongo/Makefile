@@ -2,6 +2,8 @@ include $(GOROOT)/src/Make.$(GOARCH)
 
 TARG=mongo
 GOFILES=\
+	main.go\
+\
 	connection.go\
 	database.go\
 	collection.go\
@@ -9,7 +11,6 @@ GOFILES=\
 	message.go\
 	bson.go\
 	bson-struct.go\
-	tool.go\
 
 include $(GOROOT)/src/Make.pkg
 
