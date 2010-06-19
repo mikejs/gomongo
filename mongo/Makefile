@@ -9,6 +9,7 @@ GOFILES=\
 	message.go\
 	bson.go\
 	bson-struct.go\
+	tool.go\
 
 include $(GOROOT)/src/Make.pkg
 
