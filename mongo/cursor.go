@@ -45,7 +45,7 @@ func (self *Cursor) GetMore() os.Error {
 		return os.NewError("no cursorID")
 	}
 
-	gm := &getMoreMsg{self.collection.fullName(), 0, self.id, rand.Int31()}
+	gm := &opGetMore{self.collection.fullName(), 0, self.id, rand.Int31()}
 	conn := self.collection.db.Conn
 	err := conn.writeMessage(gm)
 	if err != nil {
@@ -70,7 +70,7 @@ func (self *Cursor) Close() os.Error {
 	}
 
 	req_id := rand.Int31()
-	km := &killMsg{1, []int64{self.id}, req_id}
+	km := &opKillCursors{1, []int64{self.id}, req_id}
 	conn := self.collection.db.Conn
 	return conn.writeMessage(km)
 }
