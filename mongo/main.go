@@ -14,13 +14,13 @@ import (
 // Like BSON documents, all data in the mongo wire protocol is little-endian.
 var pack = binary.LittleEndian
 
-var lastRequestID int32
-
 var (
-	// To zero
+	// Initialized to zero.
 	_WORD32 = make([]byte, 4)
 	_WORD64 = make([]byte, 8)
 )
+
+var lastRequestID int32
 
 
 func init() {

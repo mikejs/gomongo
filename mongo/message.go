@@ -32,7 +32,7 @@ const (
 )
 
 const (
-	_ZERO        = 0
+	_ZERO        = int32(0)
 	_HEADER_SIZE = 16 // 4 (fields) of int32 (4 bytes)
 )
 
@@ -75,16 +75,24 @@ type message interface {
 
 // *** OP_UPDATE
 
-/*const (
-	Upsert
-	MultiUpdate
-)*/
+// flags
+const (
+	// If set, the database will insert the supplied object into the collection
+	// if no matching document is found.
+	f_UPSERT = 0
+
+	// If set, the database will update all matching objects in the collection.
+	// Otherwise only updates first matching doc.
+	f_MULTI_UPDATE = 1
+
+	// 2-31 - Reserved - Must be set to 0.
+)
 
 type opUpdate struct {
 	//header           msgHeader // standard message header
-	//_ZERO            int32     // 0 - reserved for future use
+	//ZERO             int32     // 0 - reserved for future use
 	fullCollectionName string // "dbname.collectionname"
-	flags              int32  // bit vector. see below
+	flags              int32  // bit vector. See above
 	selector           BSON   // the query to select the document
 	update             BSON   // specification of the update to perform
 }
@@ -93,7 +101,7 @@ func (self *opUpdate) OpCode() int32 { return _OP_UPDATE }
 
 func (self *opUpdate) Bytes() []byte {
 	w32 := _WORD32
-	buf := bytes.NewBuffer(w32) // _ZERO
+	buf := bytes.NewBuffer(w32) // ZERO
 
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
@@ -111,7 +119,7 @@ func (self *opUpdate) Bytes() []byte {
 
 type opInsert struct {
 	//header           msgHeader // standard message header
-	//_ZERO            int32     // 0 - reserved for future use
+	//ZERO             int32     // 0 - reserved for future use
 	fullCollectionName string // "dbname.collectionname"
 	documents          BSON   // one or more documents to insert into the collection
 }
@@ -119,7 +127,7 @@ type opInsert struct {
 func (self *opInsert) OpCode() int32 { return _OP_INSERT }
 
 func (self *opInsert) Bytes() []byte {
-	buf := bytes.NewBuffer(_WORD32) // _ZERO
+	buf := bytes.NewBuffer(_WORD32) // ZERO
 
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
@@ -131,14 +139,26 @@ func (self *opInsert) Bytes() []byte {
 
 // *** OP_QUERY
 
+// opts
+const (
+	_QUERY_None           = 0
+	_QUERY_TailableCursor = 2
+	_QUERY_SlaveOK        = 4
+	//_QUERY_OplogReplay     = 8 // drivers should not implement
+	_QUERY_NoCursorTimeout = 16
+)
+
+// query
+//Possible elements include $query, $orderby, $hint, $explain, and $snapshot
+
 type opQuery struct {
-	//header           msgHeader // standard message header
-	opts               int32  // query options.  See below for details.
+	//header            msgHeader // standard message header
+	opts               int32  // query options.  See above for details.
 	fullCollectionName string // "dbname.collectionname"
 	numberToSkip       int32  // number of documents to skip
 	numberToReturn     int32  // number of documents to return in the first OP_REPLY batch
-	query              BSON   // query object.  See below for details.
-	//returnFieldSelector BSON      // Optional. Selector indicating the fields to return.  See below for details.
+	query              BSON   // query object.  See above for details.
+	//returnFieldSelector BSON   // Optional. Selector indicating the fields to return.
 }
 
 func (self *opQuery) OpCode() int32 { return _OP_QUERY }
@@ -168,7 +188,7 @@ func (self *opQuery) Bytes() []byte {
 
 type opGetMore struct {
 	//header           msgHeader // standard message header
-	//_ZERO            int32     // 0 - reserved for future use
+	//ZERO             int32     // 0 - reserved for future use
 	fullCollectionName string // "dbname.collectionname"
 	numberToReturn     int32  // number of documents to return
 	cursorID           int64  // cursorID from the OP_REPLY
@@ -179,7 +199,7 @@ func (self *opGetMore) OpCode() int32 { return _OP_GET_MORE }
 func (self *opGetMore) Bytes() []byte {
 	w32 := _WORD32
 	w64 := _WORD64
-	buf := bytes.NewBuffer(w32) // _ZERO
+	buf := bytes.NewBuffer(w32) // ZERO
 
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
@@ -195,11 +215,20 @@ func (self *opGetMore) Bytes() []byte {
 
 // *** OP_DELETE
 
+// flags
+const (
+	// If set, the database will remove only the first matching document in the
+	// collection. Otherwise all matching documents will be removed.
+	_DELETE_SingleRemove = 1
+
+	// 1-31 - Reserved - Must be set to 0.
+)
+
 type opDelete struct {
 	//header           msgHeader // standard message header
-	//_ZERO            int32     // 0 - reserved for future use
+	//ZERO             int32     // 0 - reserved for future use
 	fullCollectionName string // "dbname.collectionname"
-	//flags              int32     // bit vector - see below for details.
+	//flags              int32     // bit vector - see above for details.
 	selector BSON // query object.  See below for details.
 }
 
@@ -207,7 +236,7 @@ func (self *opDelete) OpCode() int32 { return _OP_DELETE }
 
 func (self *opDelete) Bytes() []byte {
 	w32 := _WORD32
-	buf := bytes.NewBuffer(w32) // _ZERO
+	buf := bytes.NewBuffer(w32) // ZERO
 
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
@@ -223,7 +252,7 @@ func (self *opDelete) Bytes() []byte {
 
 type opKillCursors struct {
 	//header          msgHeader // standard message header
-	//_ZERO           int32     // 0 - reserved for future use
+	//ZERO            int32     // 0 - reserved for future use
 	numberOfCursorIDs int32   // number of cursorIDs in message
 	cursorIDs         []int64 // sequence of cursorIDs to close
 }
@@ -233,7 +262,7 @@ func (self *opKillCursors) OpCode() int32 { return _OP_KILL_CURSORS }
 func (self *opKillCursors) Bytes() []byte {
 	w32 := _WORD32
 	w64 := _WORD64
-	buf := bytes.NewBuffer(w32) // _ZERO
+	buf := bytes.NewBuffer(w32) // ZERO
 
 	pack.PutUint32(w32, uint32(self.numberOfCursorIDs))
 	buf.Write(w32)
