@@ -10,7 +10,24 @@ import (
 )
 
 
-var fUpsert, fUpdateAll, fUpsertAll int32 // OP_UPDATE flags
+type indexDesc struct {
+	Name string
+	Ns   string
+	Key  map[string]int
+}
+
+type Collection struct {
+	db   *Database
+	name string
+}
+
+
+// *** Client Request Messages
+// ***
+
+// *** OP_UPDATE
+
+var fUpsert, fUpdateAll, fUpsertAll int32 // flags
 
 // Calculates values of flags
 func init() {
@@ -20,18 +37,78 @@ func init() {
 	setBit32(&fUpsertAll, f_UPSERT, f_MULTI_UPDATE)
 }
 
+func (self *Collection) Update(selector, document BSON) os.Error {
+	return self.update(&opUpdate{self.fullName(), _ZERO, selector, document})
+}
 
-type indexDesc struct {
-	Name string
-	Ns   string
-	Key  map[string]int
+func (self *Collection) Upsert(selector, document BSON) os.Error {
+	return self.update(&opUpdate{self.fullName(), fUpsert, selector, document})
+}
+
+func (self *Collection) UpdateAll(selector, document BSON) os.Error {
+	return self.update(&opUpdate{self.fullName(), fUpdateAll, selector, document})
+}
+
+func (self *Collection) UpsertAll(selector, document BSON) os.Error {
+	return self.update(&opUpdate{self.fullName(), fUpsertAll, selector, document})
+}
+
+func (self *Collection) update(msg *opUpdate) os.Error {
+	return self.db.Conn.writeOp(msg)
+}
+
+// *** OP_INSERT
+
+func (self *Collection) Insert(doc BSON) os.Error {
+	msg := &opInsert{self.fullName(), doc}
+	return self.db.Conn.writeOp(msg)
+}
+
+// *** OP_QUERY
+
+func (self *Collection) Query(query BSON, skip, limit int32) (*Cursor, os.Error) {
+	conn := self.db.Conn
+	reqID := getRequestID()
+	msg := &opQuery{o_NONE, self.fullName(), skip, limit, query}
+
+	if err := conn.writeOpQuery(msg, reqID); err != nil {
+		return nil, err
+	}
+
+	reply, err := conn.readReply()
+	if err != nil {
+		return nil, err
+	}
+	if reply.responseTo != reqID {
+		return nil, os.NewError("wrong responseTo code")
+	}
+
+	return &Cursor{self, reply.cursorID, 0, reply.documents}, nil
+}
+
+// *** OP_DELETE
+
+var fSingleRemove int32 // flags
+
+// Calculates values of flags
+func init() {
+	setBit32(&fSingleRemove, f_SINGLE_REMOVE)
+}
+
+func (self *Collection) Remove(selector BSON) os.Error {
+	return self.remove(&opDelete{self.fullName(), _ZERO, selector})
+}
+
+func (self *Collection) RemoveFirst(selector BSON) os.Error {
+	return self.remove(&opDelete{self.fullName(), fSingleRemove, selector})
+}
+
+func (self *Collection) remove(msg *opDelete) os.Error {
+	return self.db.Conn.writeOp(msg)
 }
 
 
-type Collection struct {
-	db   *Database
-	name string
-}
+//**********
 
 func (self *Collection) fullName() string { return self.db.name + "." + self.name }
 
@@ -69,36 +146,6 @@ func (self *Collection) Drop() os.Error {
 	return err
 }
 
-func (self *Collection) Insert(doc BSON) os.Error {
-	im := &opInsert{self.fullName(), doc}
-	return self.db.Conn.writeOp(im)
-}
-
-func (self *Collection) Remove(selector BSON) os.Error {
-	dm := &opDelete{self.fullName(), selector}
-	return self.db.Conn.writeOp(dm)
-}
-
-func (self *Collection) Query(query BSON, skip, limit int) (*Cursor, os.Error) {
-	reqID := getRequestID()
-	conn := self.db.Conn
-	qm := &opQuery{0, self.fullName(), int32(skip), int32(limit), query}
-
-	err := conn.writeOpQuery(qm, reqID)
-	if err != nil {
-		return nil, err
-	}
-
-	reply, err := conn.readReply()
-	if err != nil {
-		return nil, err
-	}
-	if reply.responseTo != reqID {
-		return nil, os.NewError("wrong responseTo code")
-	}
-
-	return &Cursor{self, reply.cursorID, 0, reply.documents}, nil
-}
 
 func (self *Collection) FindAll(query BSON) (*Cursor, os.Error) {
 	return self.Query(query, 0, 0)
@@ -127,28 +174,6 @@ func (self *Collection) Count(query BSON) (int64, os.Error) {
 	}
 
 	return int64(reply.Get("n").Number()), nil
-}
-
-func (self *Collection) update(msg *opUpdate) os.Error {
-	conn := self.db.Conn
-
-	return conn.writeOp(msg)
-}
-
-func (self *Collection) Update(selector, document BSON) os.Error {
-	return self.update(&opUpdate{self.fullName(), _ZERO, selector, document})
-}
-
-func (self *Collection) Upsert(selector, document BSON) os.Error {
-	return self.update(&opUpdate{self.fullName(), fUpsert, selector, document})
-}
-
-func (self *Collection) UpdateAll(selector, document BSON) os.Error {
-	return self.update(&opUpdate{self.fullName(), fUpdateAll, selector, document})
-}
-
-func (self *Collection) UpsertAll(selector, document BSON) os.Error {
-	return self.update(&opUpdate{self.fullName(), fUpsertAll, selector, document})
 }
 
 
