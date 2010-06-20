@@ -146,7 +146,7 @@ func (self *Collection) UpsertAll(selector, document BSON) os.Error {
 
 func (self *Connection) writeOp(m message) os.Error {
 	body := m.Bytes()
-	h := header(msgHeader{int32(len(body) + 16), getRequestID(), 0, m.OpCode()})
+	h := header(msgHeader{int32(len(body) + _HEADER_SIZE), getRequestID(), 0, m.OpCode()})
 
 	msg := bytes.Add(h, body)
 	_, err := self.conn.Write(msg)
@@ -156,7 +156,7 @@ func (self *Connection) writeOp(m message) os.Error {
 
 func (self *Connection) writeOpQuery(m message, reqID int32) os.Error {
 	body := m.Bytes()
-	h := header(msgHeader{int32(len(body) + 16), reqID, 0, m.OpCode()})
+	h := header(msgHeader{int32(len(body) + _HEADER_SIZE), reqID, 0, m.OpCode()})
 
 	msg := bytes.Add(h, body)
 	_, err := self.conn.Write(msg)
