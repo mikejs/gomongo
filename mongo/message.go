@@ -36,12 +36,7 @@ const (
 	_HEADER_SIZE = 16 // 4 (fields) of int32 (4 bytes)
 )
 
-var (
-	// To zero
-	_WORD32      = make([]byte, 4)
-	_WORD64      = make([]byte, 8)
-	_HEADER_WORD = make([]byte, _HEADER_SIZE)
-)
+var _HEADER_WORD = make([]byte, _HEADER_SIZE)
 
 
 // *** Standard Message Header

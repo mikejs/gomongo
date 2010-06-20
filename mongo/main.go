@@ -16,6 +16,12 @@ var pack = binary.LittleEndian
 
 var lastRequestID int32
 
+var (
+	// To zero
+	_WORD32 = make([]byte, 4)
+	_WORD64 = make([]byte, 8)
+)
+
 
 func init() {
 	// Uses the 'urandom' device to get a seed which will be used by 'rand'.
