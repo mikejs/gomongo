@@ -17,6 +17,51 @@ type Cursor struct {
 	docs       *vector.Vector
 }
 
+
+// *** Client Request Messages
+// ***
+
+// *** OP_GET_MORE
+
+func (self *Cursor) GetMore() os.Error {
+	if self.id == 0 {
+		return os.NewError("no cursorID")
+	}
+
+	conn := self.collection.db.Conn
+	msg := &opGetMore{self.collection.fullName(), 0, self.id}
+
+	if err := conn.writeOp(msg); err != nil {
+		return err
+	}
+
+	reply, err := conn.readReply()
+	if err != nil {
+		return err
+	}
+
+	self.pos = 0
+	self.docs = reply.documents
+
+	return nil
+}
+
+// *** OP_KILL_CURSORS
+
+func (self *Cursor) Close() os.Error {
+	if self.id == 0 {
+		// not open on server
+		return nil
+	}
+
+	msg := &opKillCursors{1, []int64{self.id}}
+	return self.collection.db.Conn.writeOp(msg)
+}
+
+
+// **************
+
+
 func (self *Cursor) HasMore() bool {
 	if self.pos < self.docs.Len() {
 		return true
@@ -37,39 +82,5 @@ func (self *Cursor) GetNext() (BSON, os.Error) {
 		return doc, nil
 	}
 	return nil, os.NewError("cursor failure")
-}
-
-func (self *Cursor) GetMore() os.Error {
-	if self.id == 0 {
-		return os.NewError("no cursorID")
-	}
-
-	gm := &opGetMore{self.collection.fullName(), 0, self.id}
-	conn := self.collection.db.Conn
-	err := conn.writeOp(gm)
-	if err != nil {
-		return err
-	}
-
-	reply, err := conn.readReply()
-	if err != nil {
-		return err
-	}
-
-	self.pos = 0
-	self.docs = reply.documents
-
-	return nil
-}
-
-func (self *Cursor) Close() os.Error {
-	if self.id == 0 {
-		// not open on server
-		return nil
-	}
-
-	km := &opKillCursors{1, []int64{self.id}}
-	conn := self.collection.db.Conn
-	return conn.writeOp(km)
 }
 

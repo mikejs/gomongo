@@ -5,7 +5,11 @@
 package mongo
 
 import (
+	"bytes"
+	"container/vector"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net"
 	"os"
 )
@@ -55,5 +59,44 @@ func (self *Connection) Disconnect() os.Error {
 
 func (self *Connection) GetDB(name string) *Database {
 	return &Database{self, name}
+}
+
+
+// *** Database Response Message
+// ***
+
+// *** OP_REPLY
+
+func (self *Connection) readReply() (*opReply, os.Error) {
+	size_bits, _ := ioutil.ReadAll(io.LimitReader(self.conn, 4))
+	size := pack.Uint32(size_bits)
+	rest, _ := ioutil.ReadAll(io.LimitReader(self.conn, int64(size)-4))
+	reply := parseReply(rest)
+	return reply, nil
+}
+
+func parseReply(b []byte) *opReply {
+	r := new(opReply)
+	r.responseTo = int32(pack.Uint32(b[4:8]))
+	r.responseFlag = int32(pack.Uint32(b[12:16]))
+	r.cursorID = int64(pack.Uint64(b[16:24]))
+	r.startingFrom = int32(pack.Uint32(b[24:28]))
+	r.numberReturned = int32(pack.Uint32(b[28:32]))
+	r.documents = new(vector.Vector)
+
+	if r.numberReturned > 0 {
+		buf := bytes.NewBuffer(b[36:len(b)])
+		for i := 0; int32(i) < r.numberReturned; i++ {
+			var bson BSON
+			bb := new(_BSONBuilder)
+			bb.ptr = &bson
+			bb.Object()
+			Parse(buf, bb)
+			r.documents.Push(bson)
+			ioutil.ReadAll(io.LimitReader(buf, 4))
+		}
+	}
+
+	return r
 }
 
