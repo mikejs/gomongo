@@ -10,20 +10,48 @@ import (
 )
 
 
-type indexDesc struct {
-	Name string
-	Ns   string
-	Key  map[string]int
-}
-
 type Collection struct {
 	db   *Database
 	name string
 }
 
+func (self *Collection) Drop() os.Error {
+	cmdm := map[string]string{"drop": self.fullName()}
+	cmd, err := Marshal(cmdm)
+	if err != nil {
+		return err
+	}
+
+	_, err = self.db.Command(cmd)
+	return err
+}
+
+func (self *Collection) fullName() string {
+	return self.db.name + "." + self.name
+}
 
 // *** Client Request Messages
 // ***
+
+func (self *Connection) writeOp(m message) os.Error {
+	body := m.Bytes()
+	h := header(msgHeader{int32(len(body) + _HEADER_SIZE), getRequestID(), 0, m.OpCode()})
+
+	msg := bytes.Add(h, body)
+	_, err := self.conn.Write(msg)
+
+	return err
+}
+
+func (self *Connection) writeOpQuery(m message, reqID int32) os.Error {
+	body := m.Bytes()
+	h := header(msgHeader{int32(len(body) + _HEADER_SIZE), reqID, 0, m.OpCode()})
+
+	msg := bytes.Add(h, body)
+	_, err := self.conn.Write(msg)
+
+	return err
+}
 
 // *** OP_UPDATE
 
@@ -86,67 +114,6 @@ func (self *Collection) Query(query BSON, skip, limit int32) (*Cursor, os.Error)
 	return &Cursor{self, reply.cursorID, 0, reply.documents}, nil
 }
 
-// *** OP_DELETE
-
-var fSingleRemove int32 // flags
-
-// Calculates values of flags
-func init() {
-	setBit32(&fSingleRemove, f_SINGLE_REMOVE)
-}
-
-func (self *Collection) Remove(selector BSON) os.Error {
-	return self.remove(&opDelete{self.fullName(), _ZERO, selector})
-}
-
-func (self *Collection) RemoveFirst(selector BSON) os.Error {
-	return self.remove(&opDelete{self.fullName(), fSingleRemove, selector})
-}
-
-func (self *Collection) remove(msg *opDelete) os.Error {
-	return self.db.Conn.writeOp(msg)
-}
-
-
-//**********
-
-func (self *Collection) fullName() string { return self.db.name + "." + self.name }
-
-func (self *Collection) EnsureIndex(name string, index map[string]int) os.Error {
-	coll := self.db.GetCollection("system.indexes")
-	id := &indexDesc{name, self.fullName(), index}
-	desc, err := Marshal(id)
-	if err != nil {
-		return err
-	}
-	return coll.Insert(desc)
-}
-
-func (self *Collection) DropIndexes() os.Error { return self.DropIndex("*") }
-
-func (self *Collection) DropIndex(name string) os.Error {
-	cmdm := map[string]string{"deleteIndexes": self.fullName(), "index": name}
-	cmd, err := Marshal(cmdm)
-	if err != nil {
-		return err
-	}
-
-	_, err = self.db.Command(cmd)
-	return err
-}
-
-func (self *Collection) Drop() os.Error {
-	cmdm := map[string]string{"drop": self.fullName()}
-	cmd, err := Marshal(cmdm)
-	if err != nil {
-		return err
-	}
-
-	_, err = self.db.Command(cmd)
-	return err
-}
-
-
 func (self *Collection) FindAll(query BSON) (*Cursor, os.Error) {
 	return self.Query(query, 0, 0)
 }
@@ -176,27 +143,67 @@ func (self *Collection) Count(query BSON) (int64, os.Error) {
 	return int64(reply.Get("n").Number()), nil
 }
 
+// *** OP_DELETE
 
-// *** Utility
-// ***
+var fSingleRemove int32 // flags
 
-func (self *Connection) writeOp(m message) os.Error {
-	body := m.Bytes()
-	h := header(msgHeader{int32(len(body) + _HEADER_SIZE), getRequestID(), 0, m.OpCode()})
-
-	msg := bytes.Add(h, body)
-	_, err := self.conn.Write(msg)
-
-	return err
+// Calculates values of flags
+func init() {
+	setBit32(&fSingleRemove, f_SINGLE_REMOVE)
 }
 
-func (self *Connection) writeOpQuery(m message, reqID int32) os.Error {
-	body := m.Bytes()
-	h := header(msgHeader{int32(len(body) + _HEADER_SIZE), reqID, 0, m.OpCode()})
+func (self *Collection) Remove(selector BSON) os.Error {
+	return self.remove(&opDelete{self.fullName(), _ZERO, selector})
+}
 
-	msg := bytes.Add(h, body)
-	_, err := self.conn.Write(msg)
+func (self *Collection) RemoveFirst(selector BSON) os.Error {
+	return self.remove(&opDelete{self.fullName(), fSingleRemove, selector})
+}
 
+func (self *Collection) remove(msg *opDelete) os.Error {
+	return self.db.Conn.writeOp(msg)
+}
+
+
+// *** Indexes
+// ***
+
+type indexDesc struct {
+	Name string
+	Ns   string
+	Key  map[string]int
+}
+
+func (self *Collection) EnsureIndex(name string, index map[string]int) os.Error {
+	coll := self.db.GetCollection("system.indexes")
+	id := &indexDesc{name, self.fullName(), index}
+
+	desc, err := Marshal(id)
+	if err != nil {
+		return err
+	}
+
+	return coll.Insert(desc)
+}
+
+/* Deletes all indexes on the specified collection. */
+func (self *Collection) DropIndexes() os.Error {
+	return self.DropIndex("*")
+}
+
+/* Deletes a single index. */
+func (self *Collection) DropIndex(name string) os.Error {
+	cmdm := map[string]string{
+		"deleteIndexes": self.fullName(),
+		"index": name,
+	}
+
+	cmd, err := Marshal(cmdm)
+	if err != nil {
+		return err
+	}
+
+	_, err = self.db.Command(cmd)
 	return err
 }
 

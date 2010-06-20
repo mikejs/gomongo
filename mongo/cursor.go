@@ -17,6 +17,28 @@ type Cursor struct {
 	docs       *vector.Vector
 }
 
+func (self *Cursor) GetNext() (BSON, os.Error) {
+	if self.HasMore() {
+		doc := self.docs.At(self.pos).(BSON)
+		self.pos = self.pos + 1
+		return doc, nil
+	}
+	return nil, os.NewError("cursor failure")
+}
+
+func (self *Cursor) HasMore() bool {
+	if self.pos < self.docs.Len() {
+		return true
+	}
+
+	err := self.GetMore()
+	if err != nil {
+		return false
+	}
+
+	return self.pos < self.docs.Len()
+}
+
 
 // *** Client Request Messages
 // ***
@@ -56,31 +78,5 @@ func (self *Cursor) Close() os.Error {
 
 	msg := &opKillCursors{1, []int64{self.id}}
 	return self.collection.db.Conn.writeOp(msg)
-}
-
-
-// **************
-
-
-func (self *Cursor) HasMore() bool {
-	if self.pos < self.docs.Len() {
-		return true
-	}
-
-	err := self.GetMore()
-	if err != nil {
-		return false
-	}
-
-	return self.pos < self.docs.Len()
-}
-
-func (self *Cursor) GetNext() (BSON, os.Error) {
-	if self.HasMore() {
-		doc := self.docs.At(self.pos).(BSON)
-		self.pos = self.pos + 1
-		return doc, nil
-	}
-	return nil, os.NewError("cursor failure")
 }
 
