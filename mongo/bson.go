@@ -88,9 +88,9 @@ func (self *_Number) Kind() int       { return NumberKind }
 func (self *_Number) Number() float64 { return self.value }
 func (self *_Number) Bytes() []byte {
 	bits := math.Float64bits(self.value)
-	b := []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	pack.PutUint64(b, bits)
-	return b
+	w64 := _WORD64
+	pack.PutUint64(w64, bits)
+	return w64
 }
 
 type _String struct {
@@ -101,11 +101,11 @@ type _String struct {
 func (self *_String) Kind() int      { return StringKind }
 func (self *_String) String() string { return self.value }
 func (self *_String) Bytes() []byte {
-	b := []byte{0, 0, 0, 0}
+	w32 := _WORD32
 	l := len(self.value) + 1
-	pack.PutUint32(b, uint32(l))
+	pack.PutUint32(w32, uint32(l))
 
-	buf := bytes.NewBuffer(b)
+	buf := bytes.NewBuffer(w32)
 	buf.WriteString(self.value)
 	buf.WriteByte(0)
 
@@ -142,9 +142,9 @@ func (self *_Object) Bytes() []byte {
 	buf.WriteByte(0)
 
 	l := buf.Len() + 4
-	b := []byte{0, 0, 0, 0}
-	pack.PutUint32(b, uint32(l))
-	return bytes.Add(b, buf.Bytes())
+	w32 := _WORD32
+	pack.PutUint32(w32, uint32(l))
+	return bytes.Add(w32, buf.Bytes())
 }
 
 var EmptyObject BSON = &_Object{map[string]BSON{}, _Null{}}
@@ -180,9 +180,9 @@ func (self *_Array) Bytes() []byte {
 	buf.WriteByte(0)
 
 	l := buf.Len() + 4
-	b := []byte{0, 0, 0, 0}
-	pack.PutUint32(b, uint32(l))
-	return bytes.Add(b, buf.Bytes())
+	w32 := _WORD32
+	pack.PutUint32(w32, uint32(l))
+	return bytes.Add(w32, buf.Bytes())
 }
 
 type _OID struct {
@@ -216,10 +216,10 @@ type _Date struct {
 func (self *_Date) Kind() int        { return DateKind }
 func (self *_Date) Date() *time.Time { return self.value }
 func (self *_Date) Bytes() []byte {
-	b := []byte{0, 0, 0, 0, 0, 0, 0, 0}
+	w64 := _WORD64
 	mtime := self.value.Seconds() * 1000
-	pack.PutUint64(b, uint64(mtime))
-	return b
+	pack.PutUint64(w64, uint64(mtime))
+	return w64
 }
 
 type _Regex struct {
@@ -245,9 +245,9 @@ type _Int struct {
 func (self *_Int) Kind() int  { return IntKind }
 func (self *_Int) Int() int32 { return self.value }
 func (self *_Int) Bytes() []byte {
-	b := []byte{0, 0, 0, 0}
-	pack.PutUint32(b, uint32(self.value))
-	return b
+	w32 := _WORD32
+	pack.PutUint32(w32, uint32(self.value))
+	return w32
 }
 
 type _Long struct {
@@ -258,9 +258,9 @@ type _Long struct {
 func (self *_Long) Kind() int   { return LongKind }
 func (self *_Long) Long() int64 { return self.value }
 func (self *_Long) Bytes() []byte {
-	b := []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	pack.PutUint64(b, uint64(self.value))
-	return b
+	w64 := _WORD64
+	pack.PutUint64(w64, uint64(self.value))
+	return w64
 }
 
 func Equal(a, b BSON) bool {
