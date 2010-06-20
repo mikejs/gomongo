@@ -18,8 +18,6 @@ import (
 )
 
 
-const _ZERO = 0
-
 // Request Opcodes
 const (
 	_OP_REPLY        = 1    // Reply to a client request. responseTo is set
@@ -31,6 +29,18 @@ const (
 	_OP_GET_MORE     = 2005 // Get more data from a query. See Cursors
 	_OP_DELETE       = 2006 // Delete documents
 	_OP_KILL_CURSORS = 2007 // Tell database client is done with a cursor
+)
+
+const (
+	_ZERO        = 0
+	_HEADER_SIZE = 16 // 4 (fields) of int32 (4 bytes)
+)
+
+var (
+	// To zero
+	_WORD32      = make([]byte, 4)
+	_WORD64      = make([]byte, 8)
+	_HEADER_WORD = make([]byte, _HEADER_SIZE)
 )
 
 
@@ -45,14 +55,14 @@ type msgHeader struct {
 }
 
 func header(h msgHeader) []byte {
-	b := make([]byte, 16)
+	w := _HEADER_WORD
 
-	pack.PutUint32(b[0:4], uint32(h.messageLength))
-	pack.PutUint32(b[4:8], uint32(h.requestID))
-	pack.PutUint32(b[8:12], uint32(h.responseTo))
-	pack.PutUint32(b[12:16], uint32(h.opCode))
+	pack.PutUint32(w[0:4], uint32(h.messageLength))
+	pack.PutUint32(w[4:8], uint32(h.requestID))
+	pack.PutUint32(w[8:12], uint32(h.responseTo))
+	pack.PutUint32(w[12:16], uint32(h.opCode))
 
-	return b
+	return w
 }
 
 
@@ -76,25 +86,25 @@ type message interface {
 )*/
 
 type opUpdate struct {
-	//header             msgHeader // standard message header
-	//_ZERO              int32     // 0 - reserved for future use
-	fullCollectionName string    // "dbname.collectionname"
-	flags              int32     // bit vector. see below
-	selector           BSON      // the query to select the document
-	update             BSON      // specification of the update to perform
+	//header           msgHeader // standard message header
+	//_ZERO            int32     // 0 - reserved for future use
+	fullCollectionName string // "dbname.collectionname"
+	flags              int32  // bit vector. see below
+	selector           BSON   // the query to select the document
+	update             BSON   // specification of the update to perform
 }
 
 func (self *opUpdate) OpCode() int32 { return _OP_UPDATE }
 
 func (self *opUpdate) Bytes() []byte {
-	b := make([]byte, 4)
-	buf := bytes.NewBuffer(b) // _ZERO
+	w32 := _WORD32
+	buf := bytes.NewBuffer(w32) // _ZERO
 
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
 
-	pack.PutUint32(b, uint32(self.flags))
-	buf.Write(b)
+	pack.PutUint32(w32, uint32(self.flags))
+	buf.Write(w32)
 
 	buf.Write(self.selector.Bytes())
 	buf.Write(self.update.Bytes())
@@ -105,16 +115,16 @@ func (self *opUpdate) Bytes() []byte {
 // *** OP_INSERT
 
 type opInsert struct {
-	//header             msgHeader // standard message header
-	//_ZERO              int32     // 0 - reserved for future use
-	fullCollectionName string    // "dbname.collectionname"
-	documents          BSON      // one or more documents to insert into the collection
+	//header           msgHeader // standard message header
+	//_ZERO            int32     // 0 - reserved for future use
+	fullCollectionName string // "dbname.collectionname"
+	documents          BSON   // one or more documents to insert into the collection
 }
 
 func (self *opInsert) OpCode() int32 { return _OP_INSERT }
 
 func (self *opInsert) Bytes() []byte {
-	buf := bytes.NewBuffer(make([]byte, 4)) // _ZERO
+	buf := bytes.NewBuffer(_WORD32) // _ZERO
 
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
@@ -127,12 +137,12 @@ func (self *opInsert) Bytes() []byte {
 // *** OP_QUERY
 
 type opQuery struct {
-	//header              msgHeader // standard message header
-	opts                int32     // query options.  See below for details.
-	fullCollectionName  string    // "dbname.collectionname"
-	numberToSkip        int32     // number of documents to skip
-	numberToReturn      int32     // number of documents to return in the first OP_REPLY batch
-	query               BSON      // query object.  See below for details.
+	//header           msgHeader // standard message header
+	opts               int32  // query options.  See below for details.
+	fullCollectionName string // "dbname.collectionname"
+	numberToSkip       int32  // number of documents to skip
+	numberToReturn     int32  // number of documents to return in the first OP_REPLY batch
+	query              BSON   // query object.  See below for details.
 	//returnFieldSelector BSON      // Optional. Selector indicating the fields to return.  See below for details.
 }
 
@@ -140,19 +150,19 @@ func (self *opQuery) OpCode() int32 { return _OP_QUERY }
 
 func (self *opQuery) Bytes() []byte {
 	var buf bytes.Buffer
-	b := make([]byte, 4)
+	w32 := _WORD32
 
-	pack.PutUint32(b, uint32(self.opts))
-	buf.Write(b)
+	pack.PutUint32(w32, uint32(self.opts))
+	buf.Write(w32)
 
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
 
-	pack.PutUint32(b, uint32(self.numberToSkip))
-	buf.Write(b)
+	pack.PutUint32(w32, uint32(self.numberToSkip))
+	buf.Write(w32)
 
-	pack.PutUint32(b, uint32(self.numberToReturn))
-	buf.Write(b)
+	pack.PutUint32(w32, uint32(self.numberToReturn))
+	buf.Write(w32)
 
 	buf.Write(self.query.Bytes())
 
@@ -162,28 +172,28 @@ func (self *opQuery) Bytes() []byte {
 // *** OP_GET_MORE
 
 type opGetMore struct {
-	//header             msgHeader // standard message header
-	//_ZERO              int32     // 0 - reserved for future use
-	fullCollectionName string    // "dbname.collectionname"
-	numberToReturn     int32     // number of documents to return
-	cursorID           int64     // cursorID from the OP_REPLY
+	//header           msgHeader // standard message header
+	//_ZERO            int32     // 0 - reserved for future use
+	fullCollectionName string // "dbname.collectionname"
+	numberToReturn     int32  // number of documents to return
+	cursorID           int64  // cursorID from the OP_REPLY
 }
 
 func (self *opGetMore) OpCode() int32 { return _OP_GET_MORE }
 
 func (self *opGetMore) Bytes() []byte {
-	b := make([]byte, 4)
-	buf := bytes.NewBuffer(b) // _ZERO
+	w32 := _WORD32
+	w64 := _WORD64
+	buf := bytes.NewBuffer(w32) // _ZERO
 
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
 
-	pack.PutUint32(b, uint32(self.numberToReturn))
-	buf.Write(b)
+	pack.PutUint32(w32, uint32(self.numberToReturn))
+	buf.Write(w32)
 
-	b = make([]byte, 8)
-	pack.PutUint64(b, uint64(self.cursorID))
-	buf.Write(b)
+	pack.PutUint64(w64, uint64(self.cursorID))
+	buf.Write(w64)
 
 	return buf.Bytes()
 }
@@ -191,23 +201,23 @@ func (self *opGetMore) Bytes() []byte {
 // *** OP_DELETE
 
 type opDelete struct {
-	//header             msgHeader // standard message header
-	//_ZERO              int32     // 0 - reserved for future use
-	fullCollectionName string    // "dbname.collectionname"
+	//header           msgHeader // standard message header
+	//_ZERO            int32     // 0 - reserved for future use
+	fullCollectionName string // "dbname.collectionname"
 	//flags              int32     // bit vector - see below for details.
-	selector           BSON      // query object.  See below for details.
+	selector BSON // query object.  See below for details.
 }
 
 func (self *opDelete) OpCode() int32 { return _OP_DELETE }
 
 func (self *opDelete) Bytes() []byte {
-	b := make([]byte, 4)
-	buf := bytes.NewBuffer(b) // _ZERO
+	w32 := _WORD32
+	buf := bytes.NewBuffer(w32) // _ZERO
 
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
 
-	buf.Write(b)
+	buf.Write(w32)
 
 	buf.Write(self.selector.Bytes())
 
@@ -217,25 +227,25 @@ func (self *opDelete) Bytes() []byte {
 // *** OP_KILL_CURSORS
 
 type opKillCursors struct {
-	//header            msgHeader // standard message header
-	//_ZERO             int32     // 0 - reserved for future use
-	numberOfCursorIDs int32     // number of cursorIDs in message
-	cursorIDs         []int64   // sequence of cursorIDs to close
+	//header          msgHeader // standard message header
+	//_ZERO           int32     // 0 - reserved for future use
+	numberOfCursorIDs int32   // number of cursorIDs in message
+	cursorIDs         []int64 // sequence of cursorIDs to close
 }
 
 func (self *opKillCursors) OpCode() int32 { return _OP_KILL_CURSORS }
 
 func (self *opKillCursors) Bytes() []byte {
-	b := make([]byte, 4)
-	buf := bytes.NewBuffer(b) // _ZERO
+	w32 := _WORD32
+	w64 := _WORD64
+	buf := bytes.NewBuffer(w32) // _ZERO
 
-	pack.PutUint32(b, uint32(self.numberOfCursorIDs))
-	buf.Write(b)
+	pack.PutUint32(w32, uint32(self.numberOfCursorIDs))
+	buf.Write(w32)
 
-	b = make([]byte, 8)
 	for _, id := range self.cursorIDs {
-		pack.PutUint64(b, uint64(id))
-		buf.Write(b)
+		pack.PutUint64(w64, uint64(id))
+		buf.Write(w64)
 	}
 
 	return buf.Bytes()
