@@ -10,6 +10,17 @@ import (
 )
 
 
+var fUpsert, fUpdateAll, fUpsertAll int32 // OP_UPDATE flags
+
+// Calculates values of flags
+func init() {
+	//fUpdate := _ZERO
+	setBit32(&fUpsert, f_UPSERT)
+	setBit32(&fUpdateAll, f_MULTI_UPDATE)
+	setBit32(&fUpsertAll, f_UPSERT, f_MULTI_UPDATE)
+}
+
+
 type indexDesc struct {
 	Name string
 	Ns   string
@@ -118,26 +129,26 @@ func (self *Collection) Count(query BSON) (int64, os.Error) {
 	return int64(reply.Get("n").Number()), nil
 }
 
-func (self *Collection) update(um *opUpdate) os.Error {
+func (self *Collection) update(msg *opUpdate) os.Error {
 	conn := self.db.Conn
 
-	return conn.writeOp(um)
+	return conn.writeOp(msg)
 }
 
 func (self *Collection) Update(selector, document BSON) os.Error {
-	return self.update(&opUpdate{self.fullName(), 0, selector, document})
+	return self.update(&opUpdate{self.fullName(), _ZERO, selector, document})
 }
 
 func (self *Collection) Upsert(selector, document BSON) os.Error {
-	return self.update(&opUpdate{self.fullName(), 1, selector, document})
+	return self.update(&opUpdate{self.fullName(), fUpsert, selector, document})
 }
 
 func (self *Collection) UpdateAll(selector, document BSON) os.Error {
-	return self.update(&opUpdate{self.fullName(), 2, selector, document})
+	return self.update(&opUpdate{self.fullName(), fUpdateAll, selector, document})
 }
 
 func (self *Collection) UpsertAll(selector, document BSON) os.Error {
-	return self.update(&opUpdate{self.fullName(), 3, selector, document})
+	return self.update(&opUpdate{self.fullName(), fUpsertAll, selector, document})
 }
 
 
