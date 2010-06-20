@@ -57,7 +57,7 @@ func (self *Cursor) GetMore() os.Error {
 	}
 
 	self.pos = 0
-	self.docs = reply.docs
+	self.docs = reply.documents
 
 	return nil
 }

@@ -86,7 +86,7 @@ func (self *Collection) Query(query BSON, skip, limit int) (*Cursor, os.Error) {
 		return nil, os.NewError("wrong responseTo code")
 	}
 
-	return &Cursor{self, reply.cursorID, 0, reply.docs}, nil
+	return &Cursor{self, reply.cursorID, 0, reply.documents}, nil
 }
 
 func (self *Collection) FindAll(query BSON) (*Cursor, os.Error) {

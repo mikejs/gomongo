@@ -73,7 +73,7 @@ type message interface {
 /*const (
 	Upsert
 	MultiUpdate
-)
+)*/
 
 type opUpdate struct {
 	//header             msgHeader // standard message header
@@ -82,16 +82,9 @@ type opUpdate struct {
 	flags              int32     // bit vector. see below
 	selector           BSON      // the query to select the document
 	update             BSON      // specification of the update to perform
-}*/
-
-type opUpdate struct {
-	fullCollectionName string
-	flags              int32
-	selector, document BSON
-
 }
 
-func (self *opUpdate) OpCode() int32    { return _OP_UPDATE }
+func (self *opUpdate) OpCode() int32 { return _OP_UPDATE }
 
 func (self *opUpdate) Bytes() []byte {
 	b := make([]byte, 4)
@@ -104,26 +97,21 @@ func (self *opUpdate) Bytes() []byte {
 	buf.Write(b)
 
 	buf.Write(self.selector.Bytes())
-	buf.Write(self.document.Bytes())
+	buf.Write(self.update.Bytes())
 
 	return buf.Bytes()
 }
 
 // *** OP_INSERT
-/*
+
 type opInsert struct {
 	//header             msgHeader // standard message header
 	//_ZERO              int32     // 0 - reserved for future use
 	fullCollectionName string    // "dbname.collectionname"
 	documents          BSON      // one or more documents to insert into the collection
-}*/
-
-type opInsert struct {
-	fullCollectionName string
-	doc                BSON
 }
 
-func (self *opInsert) OpCode() int32    { return _OP_INSERT }
+func (self *opInsert) OpCode() int32 { return _OP_INSERT }
 
 func (self *opInsert) Bytes() []byte {
 	buf := bytes.NewBuffer(make([]byte, 4)) // _ZERO
@@ -131,32 +119,24 @@ func (self *opInsert) Bytes() []byte {
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
 
-	buf.Write(self.doc.Bytes())
+	buf.Write(self.documents.Bytes())
 
 	return buf.Bytes()
 }
 
 // *** OP_QUERY
 
-/*type opQuery struct {
+type opQuery struct {
 	//header              msgHeader // standard message header
 	opts                int32     // query options.  See below for details.
 	fullCollectionName  string    // "dbname.collectionname"
 	numberToSkip        int32     // number of documents to skip
 	numberToReturn      int32     // number of documents to return in the first OP_REPLY batch
 	query               BSON      // query object.  See below for details.
-	returnFieldSelector BSON      // Optional. Selector indicating the fields to return.  See below for details.
-}*/
-
-type opQuery struct {
-	opts               int32
-	fullCollectionName string
-	numberToSkip       int32
-	numberToReturn     int32
-	query              BSON
+	//returnFieldSelector BSON      // Optional. Selector indicating the fields to return.  See below for details.
 }
 
-func (self *opQuery) OpCode() int32    { return _OP_QUERY }
+func (self *opQuery) OpCode() int32 { return _OP_QUERY }
 
 func (self *opQuery) Bytes() []byte {
 	var buf bytes.Buffer
@@ -180,22 +160,16 @@ func (self *opQuery) Bytes() []byte {
 }
 
 // *** OP_GET_MORE
-/*
+
 type opGetMore struct {
 	//header             msgHeader // standard message header
 	//_ZERO              int32     // 0 - reserved for future use
 	fullCollectionName string    // "dbname.collectionname"
 	numberToReturn     int32     // number of documents to return
 	cursorID           int64     // cursorID from the OP_REPLY
-}*/
-
-type opGetMore struct {
-	fullCollectionName string
-	numberToReturn     int32
-	cursorID           int64
 }
 
-func (self *opGetMore) OpCode() int32    { return _OP_GET_MORE }
+func (self *opGetMore) OpCode() int32 { return _OP_GET_MORE }
 
 func (self *opGetMore) Bytes() []byte {
 	b := make([]byte, 4)
@@ -215,21 +189,16 @@ func (self *opGetMore) Bytes() []byte {
 }
 
 // *** OP_DELETE
-/*
+
 type opDelete struct {
 	//header             msgHeader // standard message header
 	//_ZERO              int32     // 0 - reserved for future use
 	fullCollectionName string    // "dbname.collectionname"
-	flags              int32     // bit vector - see below for details.
+	//flags              int32     // bit vector - see below for details.
 	selector           BSON      // query object.  See below for details.
-}*/
-
-type opDelete struct {
-	fullCollectionName string
-	selector           BSON
 }
 
-func (self *opDelete) OpCode() int32    { return _OP_DELETE }
+func (self *opDelete) OpCode() int32 { return _OP_DELETE }
 
 func (self *opDelete) Bytes() []byte {
 	b := make([]byte, 4)
@@ -247,19 +216,14 @@ func (self *opDelete) Bytes() []byte {
 
 // *** OP_KILL_CURSORS
 
-/*type opKillCursors struct {
+type opKillCursors struct {
 	//header            msgHeader // standard message header
 	//_ZERO             int32     // 0 - reserved for future use
 	numberOfCursorIDs int32     // number of cursorIDs in message
 	cursorIDs         []int64   // sequence of cursorIDs to close
-}*/
-
-type opKillCursors struct {
-	numberOfCursorIDs int32
-	cursorIDs         []int64
 }
 
-func (self *opKillCursors) OpCode() int32    { return _OP_KILL_CURSORS }
+func (self *opKillCursors) OpCode() int32 { return _OP_KILL_CURSORS }
 
 func (self *opKillCursors) Bytes() []byte {
 	b := make([]byte, 4)
@@ -283,22 +247,14 @@ func (self *opKillCursors) Bytes() []byte {
 
 // *** OP_REPLY
 
-/*type opReply struct {
+type opReply struct {
 	//header         msgHeader      // standard message header
+	responseTo     int32          // !!! Added !!!
 	responseFlag   int32          // normally zero, non-zero on query failure
 	cursorID       int64          // cursor id if client needs to do get more's
 	startingFrom   int32          // where in the cursor this reply is starting
 	numberReturned int32          // number of documents in the reply
 	documents      *vector.Vector // documents
-}*/
-
-type opReply struct {
-	responseTo     int32
-	responseFlag   int32
-	cursorID       int64
-	startingFrom   int32
-	numberReturned int32
-	docs           *vector.Vector
 }
 
 func (self *Connection) readReply() (*opReply, os.Error) {
@@ -316,7 +272,7 @@ func parseReply(b []byte) *opReply {
 	r.cursorID = int64(pack.Uint64(b[16:24]))
 	r.startingFrom = int32(pack.Uint32(b[24:28]))
 	r.numberReturned = int32(pack.Uint32(b[28:32]))
-	r.docs = new(vector.Vector)
+	r.documents = new(vector.Vector)
 
 	if r.numberReturned > 0 {
 		buf := bytes.NewBuffer(b[36:len(b)])
@@ -326,7 +282,7 @@ func parseReply(b []byte) *opReply {
 			bb.ptr = &bson
 			bb.Object()
 			Parse(buf, bb)
-			r.docs.Push(bson)
+			r.documents.Push(bson)
 			ioutil.ReadAll(io.LimitReader(buf, 4))
 		}
 	}
