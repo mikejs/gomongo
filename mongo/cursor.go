@@ -51,15 +51,19 @@ func (self *Cursor) GetMore() os.Error {
 	}
 
 	conn := self.collection.db.Conn
+	reqID := getRequestID()
 	msg := &opGetMore{self.collection.fullName(), 0, self.id}
 
-	if err := conn.writeOp(msg); err != nil {
+	if err := conn.sendMessageToReply(msg, reqID); err != nil {
 		return err
 	}
 
 	reply, err := conn.readReply()
 	if err != nil {
 		return err
+	}
+	if reply.responseTo != reqID {
+		return os.NewError("wrong responseTo code")
 	}
 
 	self.pos = 0

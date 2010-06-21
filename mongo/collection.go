@@ -7,6 +7,7 @@ package mongo
 import (
 	"bytes"
 	"os"
+	"rand"
 )
 
 
@@ -33,9 +34,9 @@ func (self *Collection) fullName() string {
 // *** Client Request Messages
 // ***
 
-func (self *Connection) writeOp(m message) os.Error {
+func (self *Connection) sendMessage(m message) os.Error {
 	body := m.Bytes()
-	h := header(msgHeader{int32(len(body) + _HEADER_SIZE), getRequestID(), 0, m.OpCode()})
+	h := header(msgHeader{int32(len(body) + _HEADER_SIZE), rand.Int31(), 0, m.OpCode()})
 
 	msg := bytes.Add(h, body)
 	_, err := self.conn.Write(msg)
@@ -43,7 +44,9 @@ func (self *Connection) writeOp(m message) os.Error {
 	return err
 }
 
-func (self *Connection) writeOpQuery(m message, reqID int32) os.Error {
+// To use with messages that receive a response from database
+// 'opQuery', 'opGetMore'.
+func (self *Connection) sendMessageToReply(m message, reqID int32) os.Error {
 	body := m.Bytes()
 	h := header(msgHeader{int32(len(body) + _HEADER_SIZE), reqID, 0, m.OpCode()})
 
@@ -82,14 +85,14 @@ func (self *Collection) UpsertAll(selector, document BSON) os.Error {
 }
 
 func (self *Collection) update(msg *opUpdate) os.Error {
-	return self.db.Conn.writeOp(msg)
+	return self.db.Conn.sendMessage(msg)
 }
 
 // *** OP_INSERT
 
 func (self *Collection) Insert(doc BSON) os.Error {
 	msg := &opInsert{self.fullName(), doc}
-	return self.db.Conn.writeOp(msg)
+	return self.db.Conn.sendMessage(msg)
 }
 
 // *** OP_QUERY
@@ -99,7 +102,7 @@ func (self *Collection) Query(query BSON, skip, limit int32) (*Cursor, os.Error)
 	reqID := getRequestID()
 	msg := &opQuery{o_NONE, self.fullName(), skip, limit, query}
 
-	if err := conn.writeOpQuery(msg, reqID); err != nil {
+	if err := conn.sendMessageToReply(msg, reqID); err != nil {
 		return nil, err
 	}
 
@@ -161,7 +164,7 @@ func (self *Collection) RemoveFirst(selector BSON) os.Error {
 }
 
 func (self *Collection) remove(msg *opDelete) os.Error {
-	return self.db.Conn.writeOp(msg)
+	return self.db.Conn.sendMessage(msg)
 }
 
 

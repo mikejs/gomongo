@@ -41,7 +41,9 @@ func init() {
 // ***
 
 /* Gets a random request identifier different to the last one.
- */
+
+To check anytime the server is sending a response ('opQuery', 'opGetMore').
+*/
 func getRequestID() int32 {
 	id := rand.Int31()
 
