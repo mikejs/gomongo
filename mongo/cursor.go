@@ -81,6 +81,6 @@ func (self *Cursor) Close() os.Error {
 	}
 
 	msg := &opKillCursors{1, []int64{self.id}}
-	return self.collection.db.Conn.writeOp(msg)
+	return self.collection.db.Conn.sendMessage(msg)
 }
 
