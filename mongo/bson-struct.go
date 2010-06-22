@@ -29,7 +29,7 @@ var nobuilder *structBuilder
 
 func isfloat(v reflect.Value) bool {
 	switch v.(type) {
-	case *reflect.FloatValue, *reflect.Float32Value, *reflect.Float64Value:
+	case *reflect.FloatValue:
 		return true
 	}
 	return false
@@ -38,35 +38,15 @@ func isfloat(v reflect.Value) bool {
 func setfloat(v reflect.Value, f float64) {
 	switch v := v.(type) {
 	case *reflect.FloatValue:
-		v.Set(float(f))
-	case *reflect.Float32Value:
-		v.Set(float32(f))
-	case *reflect.Float64Value:
-		v.Set(float64(f))
+		v.Set(f)
 	}
 }
 
 func setint(v reflect.Value, i int64) {
 	switch v := v.(type) {
 	case *reflect.IntValue:
-		v.Set(int(i))
-	case *reflect.Int8Value:
-		v.Set(int8(i))
-	case *reflect.Int16Value:
-		v.Set(int16(i))
-	case *reflect.Int32Value:
-		v.Set(int32(i))
-	case *reflect.Int64Value:
-		v.Set(int64(i))
+		v.Set(i)
 	case *reflect.UintValue:
-		v.Set(uint(i))
-	case *reflect.Uint8Value:
-		v.Set(uint8(i))
-	case *reflect.Uint16Value:
-		v.Set(uint16(i))
-	case *reflect.Uint32Value:
-		v.Set(uint32(i))
-	case *reflect.Uint64Value:
 		v.Set(uint64(i))
 	}
 }
@@ -167,7 +147,7 @@ func (self *structBuilder) OID(oid []byte) {
 			v.Set(nv)
 		}
 		for i := 0; i < 12; i++ {
-			v.Elem(i).(*reflect.Uint8Value).Set(oid[i])
+			v.Elem(i).(*reflect.UintValue).Set(uint64(oid[i]))
 		}
 	}
 }
