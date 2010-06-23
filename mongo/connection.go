@@ -5,8 +5,6 @@
 package mongo
 
 import (
-	"bytes"
-	"container/vector"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,12 +13,21 @@ import (
 )
 
 
+// Default Socket Port
+const _PORT = 27017
+
+
 type Connection struct {
 	Addr *net.TCPAddr
 	conn *net.TCPConn
 }
 
-func Connect(host string, port int) (*Connection, os.Error) {
+func Connect(host string) (*Connection, os.Error) {
+	return ConnectAt(host, _PORT)
+}
+
+/* Creates a new connection to a single MongoDB instance at host:port. */
+func ConnectAt(host string, port int) (*Connection, os.Error) {
 	addr, err := net.ResolveTCPAddr(fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		return nil, err
@@ -61,42 +68,15 @@ func (self *Connection) GetDB(name string) *Database {
 	return &Database{self, name}
 }
 
-
-// *** Database Response Message
-// ***
-
 // *** OP_REPLY
 
+/* Gets the message of reply from database. */
 func (self *Connection) readReply() (*opReply, os.Error) {
 	size_bits, _ := ioutil.ReadAll(io.LimitReader(self.conn, 4))
 	size := pack.Uint32(size_bits)
 	rest, _ := ioutil.ReadAll(io.LimitReader(self.conn, int64(size)-4))
 	reply := parseReply(rest)
+
 	return reply, nil
-}
-
-func parseReply(b []byte) *opReply {
-	r := new(opReply)
-	r.responseTo = int32(pack.Uint32(b[4:8]))
-	r.responseFlag = int32(pack.Uint32(b[12:16]))
-	r.cursorID = int64(pack.Uint64(b[16:24]))
-	r.startingFrom = int32(pack.Uint32(b[24:28]))
-	r.numberReturned = int32(pack.Uint32(b[28:32]))
-	r.documents = new(vector.Vector)
-
-	if r.numberReturned > 0 {
-		buf := bytes.NewBuffer(b[36:len(b)])
-		for i := 0; int32(i) < r.numberReturned; i++ {
-			var bson BSON
-			bb := new(_BSONBuilder)
-			bb.ptr = &bson
-			bb.Object()
-			Parse(buf, bb)
-			r.documents.Push(bson)
-			ioutil.ReadAll(io.LimitReader(buf, 4))
-		}
-	}
-
-	return r
 }
 

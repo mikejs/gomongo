@@ -12,6 +12,8 @@ package mongo
 import (
 	"bytes"
 	"container/vector"
+	"io"
+	"io/ioutil"
 )
 
 
@@ -287,5 +289,33 @@ type opReply struct {
 	startingFrom   int32          // where in the cursor this reply is starting
 	numberReturned int32          // number of documents in the reply
 	documents      *vector.Vector // documents
+}
+
+func parseReply(b []byte) *opReply {
+	r := new(opReply)
+
+	r.responseTo = int32(pack.Uint32(b[4:8]))
+	r.responseFlag = int32(pack.Uint32(b[12:16]))
+	r.cursorID = int64(pack.Uint64(b[16:24]))
+	r.startingFrom = int32(pack.Uint32(b[24:28]))
+	r.numberReturned = int32(pack.Uint32(b[28:32]))
+	r.documents = new(vector.Vector)
+
+	if r.numberReturned > 0 {
+		buf := bytes.NewBuffer(b[36:len(b)])
+
+		for i := 0; int32(i) < r.numberReturned; i++ {
+			var bson BSON
+			bb := new(_BSONBuilder)
+
+			bb.ptr = &bson
+			bb.Object()
+			Parse(buf, bb)
+			r.documents.Push(bson)
+			ioutil.ReadAll(io.LimitReader(buf, 4))
+		}
+	}
+
+	return r
 }
 

@@ -23,7 +23,7 @@ func TestStuff(t *testing.T) {
 	obj, err := BytesToBSON([]byte{92, 0, 0, 0, 1, 115, 101, 99, 111, 110, 100, 0, 0, 0, 0, 0, 0, 0, 0, 64, 3, 102, 105, 102, 116, 104, 0, 23, 0, 0, 0, 2, 118, 0, 2, 0, 0, 0, 101, 0, 2, 102, 0, 2, 0, 0, 0, 105, 0, 0, 3, 102, 111, 117, 114, 116, 104, 0, 5, 0, 0, 0, 0, 2, 116, 104, 105, 114, 100, 0, 6, 0, 0, 0, 116, 104, 114, 101, 101, 0, 16, 102, 105, 114, 115, 116, 0, 1, 0, 0, 0, 0})
 	assertTrue(err == nil, "failed parsing BSON obj", t)
 
-	conn, err := Connect("127.0.0.1", 27017)
+	conn, err := Connect("127.0.0.1")
 	assertTrue(err == nil && conn != nil, fmt.Sprintf("failed connecting to mongo: %v", err), t)
 
 	db := conn.GetDB("go_driver_tests")
@@ -68,7 +68,7 @@ func TestStuff(t *testing.T) {
 
 func TestOtherStuff(t *testing.T) {
 	doc, _ := Marshal(map[string]string{"_id": "doc1", "title": "A Mongo document", "content": "Testing, 1. 2. 3."})
-	conn, _ := Connect("127.0.0.1", 27017)
+	conn, _ := Connect("127.0.0.1")
 	collection := conn.GetDB("test").GetCollection("test_collection")
 	collection.Insert(doc)
 
@@ -94,7 +94,7 @@ func timeIt(s string, f func(*Collection, *testing.T), coll *Collection, t *test
 }
 
 func TestBenchmark(t *testing.T) {
-	conn, err := Connect("127.0.0.1", 27017)
+	conn, err := Connect("127.0.0.1")
 	if err != nil {
 		t.Error("failed connecting")
 	}
