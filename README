@@ -7,7 +7,7 @@ Example usage
 
 
 	func main() {
-		conn, _ := mongo.Connect("127.0.0.1", 27017)
+		conn, _ := mongo.Connect("127.0.0.1")
 		collection := conn.GetDB("test").GetCollection("test_collection")
 
 		doc, _ := mongo.Marshal(map[string]string{
