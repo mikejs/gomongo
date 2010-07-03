@@ -1,5 +1,5 @@
-// Copyright 2009,2010 The 'gomongo' Authors.  All rights reserved.
-// Use of this source code is governed by the New BSD License
+// Copyright 2009,2010, The 'gomongo' Authors.  All rights reserved.
+// Use of this source code is governed by the 3-clause BSD License
 // that can be found in the LICENSE file.
 
 package mongo
