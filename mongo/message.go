@@ -38,8 +38,8 @@ const (
 var _HEADER_WORD = make([]byte, _HEADER_SIZE)
 
 
-// *** Standard Message Header
-// ***
+// === Standard Message Header
+// ===
 
 type msgHeader struct {
 	messageLength int32 // total message size, including this
@@ -60,8 +60,8 @@ func header(h msgHeader) []byte {
 }
 
 
-// *** Messages interface
-// ***
+// === Messages interface
+// ===
 
 type message interface {
 	Bytes() []byte
@@ -69,10 +69,10 @@ type message interface {
 }
 
 
-// *** Client Request Messages
-// ***
+// === Client Request Messages
+// ===
 
-// *** OP_UPDATE
+// === OP_UPDATE
 
 // flags
 const (
@@ -114,7 +114,7 @@ func (self *opUpdate) Bytes() []byte {
 	return buf.Bytes()
 }
 
-// *** OP_INSERT
+// === OP_INSERT
 
 type opInsert struct {
 	//header           msgHeader // standard message header
@@ -136,7 +136,7 @@ func (self *opInsert) Bytes() []byte {
 	return buf.Bytes()
 }
 
-// *** OP_QUERY
+// === OP_QUERY
 
 // opts
 const (
@@ -183,7 +183,7 @@ func (self *opQuery) Bytes() []byte {
 	return buf.Bytes()
 }
 
-// *** OP_GET_MORE
+// === OP_GET_MORE
 
 type opGetMore struct {
 	//header           msgHeader // standard message header
@@ -212,7 +212,7 @@ func (self *opGetMore) Bytes() []byte {
 	return buf.Bytes()
 }
 
-// *** OP_DELETE
+// === OP_DELETE
 
 // flags
 const (
@@ -248,7 +248,7 @@ func (self *opDelete) Bytes() []byte {
 	return buf.Bytes()
 }
 
-// *** OP_KILL_CURSORS
+// === OP_KILL_CURSORS
 
 type opKillCursors struct {
 	//header          msgHeader // standard message header
@@ -276,10 +276,10 @@ func (self *opKillCursors) Bytes() []byte {
 }
 
 
-// *** Database Response Message
-// ***
+// === Database Response Message
+// ===
 
-// *** OP_REPLY
+// === OP_REPLY
 
 type opReply struct {
 	//header         msgHeader      // standard message header

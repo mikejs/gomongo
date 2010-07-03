@@ -68,7 +68,7 @@ func (self *Connection) GetDB(name string) *Database {
 	return &Database{self, name}
 }
 
-// *** OP_REPLY
+// === OP_REPLY
 
 /* Gets the message of reply from database. */
 func (self *Connection) readReply() (*opReply, os.Error) {

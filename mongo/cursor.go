@@ -40,10 +40,10 @@ func (self *Cursor) HasMore() bool {
 }
 
 
-// *** Client Request Messages
-// ***
+// === Client Request Messages
+// ===
 
-// *** OP_GET_MORE
+// === OP_GET_MORE
 
 func (self *Cursor) GetMore() os.Error {
 	if self.id == 0 {
@@ -72,7 +72,7 @@ func (self *Cursor) GetMore() os.Error {
 	return nil
 }
 
-// *** OP_KILL_CURSORS
+// === OP_KILL_CURSORS
 
 func (self *Cursor) Close() os.Error {
 	if self.id == 0 {

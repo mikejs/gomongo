@@ -37,8 +37,8 @@ func init() {
 }
 
 
-// *** Utility functions
-// ***
+// === Utility functions
+// ===
 
 /* Gets a random request identifier different to the last one.
 
@@ -55,7 +55,7 @@ func getRequestID() int32 {
 	return id
 }
 
-// *** Bits data
+// === Bits data
 
 func setBit32(num *int32, position ...byte) {
 	const MASK = 1

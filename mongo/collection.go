@@ -31,8 +31,8 @@ func (self *Collection) fullName() string {
 	return self.db.name + "." + self.name
 }
 
-// *** Client Request Messages
-// ***
+// === Client Request Messages
+// ===
 
 func (self *Connection) sendMessage(m message) os.Error {
 	body := m.Bytes()
@@ -56,7 +56,7 @@ func (self *Connection) sendMessageToReply(m message, reqID int32) os.Error {
 	return err
 }
 
-// *** OP_UPDATE
+// === OP_UPDATE
 
 var fUpsert, fUpdateAll, fUpsertAll int32 // flags
 
@@ -88,14 +88,14 @@ func (self *Collection) update(msg *opUpdate) os.Error {
 	return self.db.Conn.sendMessage(msg)
 }
 
-// *** OP_INSERT
+// === OP_INSERT
 
 func (self *Collection) Insert(doc BSON) os.Error {
 	msg := &opInsert{self.fullName(), doc}
 	return self.db.Conn.sendMessage(msg)
 }
 
-// *** OP_QUERY
+// === OP_QUERY
 
 func (self *Collection) Query(query BSON, skip, limit int32) (*Cursor, os.Error) {
 	conn := self.db.Conn
@@ -146,7 +146,7 @@ func (self *Collection) Count(query BSON) (int64, os.Error) {
 	return int64(reply.Get("n").Number()), nil
 }
 
-// *** OP_DELETE
+// === OP_DELETE
 
 var fSingleRemove int32 // flags
 
@@ -168,8 +168,8 @@ func (self *Collection) remove(msg *opDelete) os.Error {
 }
 
 
-// *** Indexes
-// ***
+// === Indexes
+// ===
 
 type indexDesc struct {
 	Name string
