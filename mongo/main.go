@@ -7,7 +7,8 @@ package mongo
 import (
 	"encoding/binary"
 	"rand"
-	crand "crypto/rand"
+
+	crand "github.com/kless/freecrypto/rand"
 )
 
 
@@ -26,8 +27,8 @@ var lastRequestID int32
 func init() {
 	// Uses the 'urandom' device to get a seed which will be used by 'rand'.
 	randombytes := make([]byte, 8)
-	if _, err := crand.Read(randombytes); err != nil {
-		panic("Pseudo-random source malfunction!")
+	if err := crand.ReadUrandom(randombytes); err != nil {
+		panic(err)
 	}
 
 	random := binary.LittleEndian.Uint64(randombytes)

@@ -1,4 +1,6 @@
 *~
+_*
+*_
 *.pyc
 *.so
 
@@ -7,7 +9,6 @@
 *.a
 *.6
 *.gom
-*_test/
 
 # Projects
 *.kpf
@@ -18,8 +19,6 @@ nbproject/
 *.egg-info/
 build/
 dist/
-docs/_build/
-docs/_static/
 
 # VCS
 .svn/
