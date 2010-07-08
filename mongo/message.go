@@ -35,8 +35,6 @@ const (
 	_HEADER_SIZE = 16 // 4 (fields) of int32 (4 bytes)
 )
 
-var _HEADER_WORD = make([]byte, _HEADER_SIZE)
-
 
 // === Standard Message Header
 // ===
@@ -49,7 +47,7 @@ type msgHeader struct {
 }
 
 func header(h msgHeader) []byte {
-	w := _HEADER_WORD
+	w := make([]byte, _HEADER_SIZE)
 
 	pack.PutUint32(w[0:4], uint32(h.messageLength))
 	pack.PutUint32(w[4:8], uint32(h.requestID))
@@ -99,7 +97,7 @@ type opUpdate struct {
 func (self *opUpdate) OpCode() int32 { return _OP_UPDATE }
 
 func (self *opUpdate) Bytes() []byte {
-	w32 := _WORD32
+	w32 := make([]byte, _WORD32)
 	buf := bytes.NewBuffer(w32) // ZERO
 
 	buf.WriteString(self.fullCollectionName)
@@ -126,7 +124,7 @@ type opInsert struct {
 func (self *opInsert) OpCode() int32 { return _OP_INSERT }
 
 func (self *opInsert) Bytes() []byte {
-	buf := bytes.NewBuffer(_WORD32) // ZERO
+	buf := bytes.NewBuffer(make([]byte, _WORD32)) // ZERO
 
 	buf.WriteString(self.fullCollectionName)
 	buf.WriteByte(0)
@@ -164,7 +162,7 @@ func (self *opQuery) OpCode() int32 { return _OP_QUERY }
 
 func (self *opQuery) Bytes() []byte {
 	var buf bytes.Buffer
-	w32 := _WORD32
+	w32 := make([]byte, _WORD32)
 
 	pack.PutUint32(w32, uint32(self.opts))
 	buf.Write(w32)
@@ -196,8 +194,8 @@ type opGetMore struct {
 func (self *opGetMore) OpCode() int32 { return _OP_GET_MORE }
 
 func (self *opGetMore) Bytes() []byte {
-	w32 := _WORD32
-	w64 := _WORD64
+	w32 := make([]byte, _WORD32)
+	w64 := make([]byte, _WORD64)
 	buf := bytes.NewBuffer(w32) // ZERO
 
 	buf.WriteString(self.fullCollectionName)
@@ -234,7 +232,7 @@ type opDelete struct {
 func (self *opDelete) OpCode() int32 { return _OP_DELETE }
 
 func (self *opDelete) Bytes() []byte {
-	w32 := _WORD32
+	w32 := make([]byte, _WORD32)
 	buf := bytes.NewBuffer(w32) // ZERO
 
 	buf.WriteString(self.fullCollectionName)
@@ -260,8 +258,8 @@ type opKillCursors struct {
 func (self *opKillCursors) OpCode() int32 { return _OP_KILL_CURSORS }
 
 func (self *opKillCursors) Bytes() []byte {
-	w32 := _WORD32
-	w64 := _WORD64
+	w32 := make([]byte, _WORD32)
+	w64 := make([]byte, _WORD64)
 	buf := bytes.NewBuffer(w32) // ZERO
 
 	pack.PutUint32(w32, uint32(self.numberOfCursorIDs))
