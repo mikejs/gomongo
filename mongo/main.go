@@ -15,10 +15,10 @@ import (
 // Like BSON documents, all data in the mongo wire protocol is little-endian.
 var pack = binary.LittleEndian
 
+// Words size in bytes.
 var (
-	// Initialized to zero.
-	_WORD32 = make([]byte, 4)
-	_WORD64 = make([]byte, 8)
+	_WORD32 = 4
+	_WORD64 = 8
 )
 
 var lastRequestID int32
@@ -26,7 +26,7 @@ var lastRequestID int32
 
 func init() {
 	// Uses the 'urandom' device to get a seed which will be used by 'rand'.
-	randombytes := make([]byte, 8)
+	randombytes := make([]byte, _WORD64)
 	if err := crand.ReadUrandom(randombytes); err != nil {
 		panic(err)
 	}
