@@ -2,13 +2,19 @@
 // Use of this source code is governed by the 3-clause BSD License
 // that can be found in the LICENSE file.
 
+// Note that Go's cryptography library is copyrighted by an USA company,
+// so it's liable to cryptography regulations from USA.
+// That viral law affects to any program where it's being used,
+// so it can not be used in some third countries (where USA say you).
+
 package mongo
 
 import (
 	"encoding/binary"
 	"rand"
+	//crand "crypto/rand"
 
-	crand "github.com/kless/freecrypto/rand"
+	crand "github.com/kless/freecrypto/rand" // under CC0 (like public domain)
 )
 
 
@@ -27,11 +33,13 @@ var lastRequestID int32
 func init() {
 	// Uses the 'urandom' device to get a seed which will be used by 'rand'.
 	randombytes := make([]byte, _WORD64)
+
+	//if _, err := crand.Read(randombytes); err != nil {
 	if err := crand.ReadUrandom(randombytes); err != nil {
 		panic(err)
 	}
 
-	random := binary.LittleEndian.Uint64(randombytes)
+	random := pack.Uint64(randombytes)
 	// If you seed it with something predictable like the time, the risk is obvious.
 	// rand.Seed(time.Nanoseconds())
 	rand.Seed(int64(random))
