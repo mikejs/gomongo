@@ -1,6 +1,6 @@
 include $(GOROOT)/src/Make.$(GOARCH)
 
-TARG=github.com/kless/gomongo/mongo
+TARG=github.com/mikejs/gomongo/mongo
 GOFILES=\
 	main.go\
 \
