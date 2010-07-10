@@ -3,7 +3,7 @@ Example usage
 
 	package main
 
-	import "github.com/kless/gomongo/mongo"
+	import "github.com/mikejs/gomongo/mongo"
 
 
 	func main() {
