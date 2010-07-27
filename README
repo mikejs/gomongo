@@ -1,3 +1,24 @@
+=======
+gomongo
+=======
+Go driver for `MongoDB`_, a document based database which is being used in
+`production`_ with great succesful.
+
+Read this `article` to know more.
+
+
+.. _MongoDB: http://www.mongodb.org/
+.. _production: http://www.mongodb.org/display/DOCS/Production+Deployments
+.. _article: http://go.hokapoka.com/golang/mongodb-golang-gomongo/
+
+
+Installation
+============
+The easiest way to install it's through `goinstall` which automatically installs
+the third libraries::
+
+	$ [sudo -E] goinstall github.com/mikejs/gomongo/mongo
+
 Example usage
 -------------
 
