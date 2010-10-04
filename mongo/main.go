@@ -13,8 +13,8 @@ import (
 	"encoding/binary"
 	"rand"
 	//crand "crypto/rand"
-
-	crand "github.com/kless/freecrypto/rand" // under CC0 (like public domain)
+	
+	crand "freecrypto/rand"
 )
 
 

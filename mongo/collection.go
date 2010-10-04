@@ -17,12 +17,11 @@ type Collection struct {
 }
 
 func (self *Collection) Drop() os.Error {
-	cmdm := map[string]string{"drop": self.fullName()}
+	cmdm := map[string]string{"drop": self.name}
 	cmd, err := Marshal(cmdm)
 	if err != nil {
 		return err
 	}
-
 	_, err = self.db.Command(cmd)
 	return err
 }
