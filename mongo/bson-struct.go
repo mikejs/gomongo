@@ -288,6 +288,12 @@ func Marshal(val interface{}) (BSON, os.Error) {
 			if err != nil {
 				return nil, err
 			}
+			// MongoDB uses '_id' as the primary key, but this
+			// name is private in Go. Use 'Id_' for this purpose
+			// instead.
+			if key == "id_" {
+				key = "_id"
+			}
 			o.value[key] = el
 		}
 		return o, nil

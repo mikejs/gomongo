@@ -389,7 +389,6 @@ func (self *_BSONBuilder) OID(o []byte)  { self.Put(&_OID{o, _Null{}}) }
 
 func (self *_BSONBuilder) Key(key string) Builder {
 	bb2 := new(_BSONBuilder)
-
 	switch obj := self.Get().(type) {
 	case *_Object:
 		bb2.obj = obj.value
@@ -443,6 +442,12 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 
 	for kind != EOOKind {
 		name := readCString(buf)
+		// MongoDB uses '_id' as the primary key, but this
+		// name is private in Go. Use 'Id_' for this purpose
+		// instead.
+		if name == "_id" {
+			name = "id_"
+		}
 		b2 := builder.Key(name)
 
 		switch kind {
