@@ -5,7 +5,6 @@
 package mongo
 
 import (
-	"bytes"
 	"os"
 	"rand"
 )
@@ -38,7 +37,7 @@ func (self *Connection) sendMessage(m message) os.Error {
 	body := m.Bytes()
 	h := header(msgHeader{int32(len(body) + _HEADER_SIZE), rand.Int31(), 0, m.OpCode()})
 
-	msg := bytes.Add(h, body)
+	msg := append(h, body...)
 	_, err := self.conn.Write(msg)
 
 	return err
@@ -50,7 +49,7 @@ func (self *Connection) sendMessageToReply(m message, reqID int32) os.Error {
 	body := m.Bytes()
 	h := header(msgHeader{int32(len(body) + _HEADER_SIZE), reqID, 0, m.OpCode()})
 
-	msg := bytes.Add(h, body)
+	msg := append(h, body...)
 	_, err := self.conn.Write(msg)
 
 	return err
