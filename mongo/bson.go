@@ -144,7 +144,7 @@ func (self *_Object) Bytes() []byte {
 	l := buf.Len() + 4
 	w32 := make([]byte, _WORD32)
 	pack.PutUint32(w32, uint32(l))
-	return bytes.Add(w32, buf.Bytes())
+	return append(w32, buf.Bytes()...)
 }
 
 var EmptyObject BSON = &_Object{map[string]BSON{}, _Null{}}
@@ -182,7 +182,7 @@ func (self *_Array) Bytes() []byte {
 	l := buf.Len() + 4
 	w32 := make([]byte, _WORD32)
 	pack.PutUint32(w32, uint32(l))
-	return bytes.Add(w32, buf.Bytes())
+	return append(w32, buf.Bytes()...)
 }
 
 type _OID struct {
