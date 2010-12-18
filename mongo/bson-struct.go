@@ -182,7 +182,7 @@ func (self *structBuilder) Elem(i int) Builder {
 				n *= 2
 			}
 			nv := reflect.MakeSlice(v.Type().(*reflect.SliceType), v.Len(), n)
-			reflect.ArrayCopy(nv, v)
+			reflect.Copy(nv, v)
 			v.Set(nv)
 		}
 		if v.Len() <= i && i < v.Cap() {
