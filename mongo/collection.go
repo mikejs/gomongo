@@ -7,6 +7,7 @@ package mongo
 import (
 	"os"
 	"rand"
+	//"fmt"
 )
 
 
@@ -16,12 +17,11 @@ type Collection struct {
 }
 
 func (self *Collection) Drop() os.Error {
-	cmdm := map[string]string{"drop": self.fullName()}
+	cmdm := map[string]string{"drop": self.name}
 	cmd, err := Marshal(cmdm)
 	if err != nil {
 		return err
 	}
-
 	_, err = self.db.Command(cmd)
 	return err
 }
@@ -99,6 +99,7 @@ func (self *Collection) Insert(doc BSON) os.Error {
 func (self *Collection) Query(query BSON, skip, limit int32) (*Cursor, os.Error) {
 	conn := self.db.Conn
 	reqID := getRequestID()
+	
 	msg := &opQuery{o_NONE, self.fullName(), skip, limit, query}
 
 	if err := conn.sendMessageToReply(msg, reqID); err != nil {

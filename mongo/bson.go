@@ -15,6 +15,7 @@ import (
 	"math"
 	"time"
 	"bytes"
+	"encoding/hex"
 	"strconv"
 	"container/vector"
 )
@@ -197,6 +198,18 @@ func (self *_OID) Bytes() []byte { return self.value }
 type _Boolean struct {
 	value bool
 	_Null
+}
+
+type ObjectId struct {
+	Value string
+}
+
+func (self *ObjectId) Binary() []byte {
+	rv, err := hex.DecodeString(self.Value)
+	if err != nil{
+		return nil
+	}
+	return rv
 }
 
 func (self *_Boolean) Kind() int  { return BooleanKind }
@@ -442,6 +455,7 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 
 	for kind != EOOKind {
 		name := readCString(buf)
+		//fmt.Printf("name: %v, kind: %v\n", name, kind)
 		// MongoDB uses '_id' as the primary key, but this
 		// name is private in Go. Use 'Id_' for this purpose
 		// instead.

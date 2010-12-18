@@ -266,6 +266,12 @@ func Marshal(val interface{}) (BSON, os.Error) {
 		return &_Long{v, _Null{}}, nil
 	case int:
 		return &_Long{int64(v), _Null{}}, nil
+	case ObjectId:
+		vb := v.Binary()
+		if vb == nil{
+			return nil, os.NewError("Cannot convert object id to binary")
+		}
+		return &_OID{vb, _Null{}}, nil
 	case *time.Time:
 		return &_Date{v, _Null{}}, nil
 	}

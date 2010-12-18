@@ -14,7 +14,7 @@ import (
 
 
 // Default Socket Port
-const _PORT = 27017
+//const _PORT = 27017
 
 
 type Connection struct {
@@ -22,8 +22,8 @@ type Connection struct {
 	conn *net.TCPConn
 }
 
-func Connect(host string) (*Connection, os.Error) {
-	return ConnectAt(host, _PORT)
+func Connect(host string, port int) (*Connection, os.Error) {
+	return ConnectAt(host, port)
 }
 
 /* Creates a new connection to a single MongoDB instance at host:port. */
