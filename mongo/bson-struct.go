@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"time"
 	"container/vector"
+	"strconv"
 )
 
 type structBuilder struct {
@@ -238,6 +239,26 @@ func (self *structBuilder) Key(k string) Builder {
 			elem = v.Elem(key)
 		}
 		return &structBuilder{val: elem, map_: v, key: key}
+	case *reflect.SliceValue:
+		index, err := strconv.Atoi(k)
+		if err != nil {
+			return nobuilder
+		}
+		if index < v.Len() {
+			return &structBuilder{val: v.Elem(index)}
+		}
+		if index < v.Cap() {
+			v.SetLen(index + 1)
+			return &structBuilder{val: v.Elem(index)}
+		}
+		newCap := v.Cap() * 2
+		if index >= newCap {
+			newCap = index*2 + 1
+		}
+		temp := reflect.MakeSlice(v.Type().(*reflect.SliceType), index+1, newCap)
+		reflect.Copy(temp, v)
+		v.Set(temp)
+		return &structBuilder{val: v.Elem(index)}
 	}
 	return nobuilder
 }
