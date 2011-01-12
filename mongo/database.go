@@ -1,4 +1,4 @@
-// Copyright 2009,2010, The 'gomongo' Authors.  All rights reserved.
+// Copyright 2009-2011 The gomongo Authors.  All rights reserved.
 // Use of this source code is governed by the 3-clause BSD License
 // that can be found in the LICENSE file.
 
@@ -51,4 +51,3 @@ func (self *Database) Command(cmd BSON) (BSON, os.Error) {
 func (self *Database) GetCollectionNames() *vector.StringVector {
 	return new(vector.StringVector)
 }
-

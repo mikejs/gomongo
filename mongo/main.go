@@ -1,11 +1,6 @@
-// Copyright 2010, The 'gomongo' Authors.  All rights reserved.
+// Copyright 2009-2011 The gomongo Authors. All rights reserved.
 // Use of this source code is governed by the 3-clause BSD License
 // that can be found in the LICENSE file.
-
-// Note that Go's cryptography library is copyrighted by an USA company,
-// so it's liable to cryptography regulations from USA.
-// That viral law affects to any program where it's being used,
-// so it can not be used in some third countries (where USA say you).
 
 package mongo
 
@@ -73,4 +68,3 @@ func setBit32(num *int32, position ...byte) {
 		*num |= MASK << pos
 	}
 }
-

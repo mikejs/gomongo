@@ -1,7 +1,7 @@
 // Based on the Go json package.
 
 // Copyright 2009 The Go Authors.  All rights reserved.
-// Copyright 2009,2010, The 'gomongo' Authors.  All rights reserved.
+// Copyright 2009-2011 The gomongo Authors.  All rights reserved.
 // Use of this source code is governed by the 3-clause BSD License
 // that can be found in the LICENSE and LICENSE.GO files.
 
@@ -330,4 +330,3 @@ func Marshal(val interface{}) (BSON, os.Error) {
 
 	return nil, nil
 }
-

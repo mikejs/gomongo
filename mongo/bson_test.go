@@ -1,4 +1,4 @@
-// Copyright 2009,2010, The 'gomongo' Authors.  All rights reserved.
+// Copyright 2009-2011 The gomongo Authors.  All rights reserved.
 // Use of this source code is governed by the 3-clause BSD License
 // that can be found in the LICENSE file.
 
@@ -60,7 +60,7 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestIdHandling(t *testing.T) {
-	ei := ExampleWithId{Id_:"fooid", Other: "bar"}
+	ei := ExampleWithId{Id_: "fooid", Other: "bar"}
 	// verify Id_ gets turned into _id
 	parsed, err := Marshal(ei)
 	assertTrue(err == nil, "cannot marshal", t)
@@ -100,4 +100,3 @@ func TestMarshal(t *testing.T) {
 	Unmarshal(bs2.Bytes(), es2)
 	assertTrue(es2.Date.Seconds() == d.Seconds(), "date unmarshal", t)
 }
-

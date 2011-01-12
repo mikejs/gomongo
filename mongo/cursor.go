@@ -1,4 +1,4 @@
-// Copyright 2009,2010, The 'gomongo' Authors.  All rights reserved.
+// Copyright 2009-2011 The gomongo Authors.  All rights reserved.
 // Use of this source code is governed by the 3-clause BSD License
 // that can be found in the LICENSE file.
 
@@ -83,4 +83,3 @@ func (self *Cursor) Close() os.Error {
 	msg := &opKillCursors{1, []int64{self.id}}
 	return self.collection.db.Conn.sendMessage(msg)
 }
-

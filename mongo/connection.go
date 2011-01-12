@@ -1,4 +1,4 @@
-// Copyright 2009,2010, The 'gomongo' Authors.  All rights reserved.
+// Copyright 2009-2011 The gomongo Authors.  All rights reserved.
 // Use of this source code is governed by the 3-clause BSD License
 // that can be found in the LICENSE file.
 
@@ -79,4 +79,3 @@ func (self *Connection) readReply() (*opReply, os.Error) {
 
 	return reply, nil
 }
-

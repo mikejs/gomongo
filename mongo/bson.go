@@ -506,4 +506,3 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 
 	return
 }
-

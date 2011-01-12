@@ -1,4 +1,4 @@
-// Copyright 2009,2010, The 'gomongo' Authors.  All rights reserved.
+// Copyright 2009-2011 The gomongo Authors.  All rights reserved.
 // Use of this source code is governed by the 3-clause BSD License
 // that can be found in the LICENSE file.
 
@@ -197,7 +197,7 @@ func (self *Collection) DropIndexes() os.Error {
 func (self *Collection) DropIndex(name string) os.Error {
 	cmdm := map[string]string{
 		"deleteIndexes": self.fullName(),
-		"index": name,
+		"index":         name,
 	}
 
 	cmd, err := Marshal(cmdm)
@@ -208,4 +208,3 @@ func (self *Collection) DropIndex(name string) os.Error {
 	_, err = self.db.Command(cmd)
 	return err
 }
-
