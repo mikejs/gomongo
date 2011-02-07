@@ -18,160 +18,242 @@ import (
 	"strconv"
 )
 
+type bsonError struct {
+	msg string
+}
+
+func NewBsonError(format string, args ...interface{}) bsonError {
+	return bsonError{fmt.Sprintf(format, args...)}
+}
+
+func (self bsonError) String() string {
+	return self.msg
+}
+
+// Maps & interface values will not give you a reference to their underlying object.
+// You can only update them through their Set methods.
 type structBuilder struct {
 	val reflect.Value
 
-	// if map_ != nil, write val to map_[key] on each change
+	// isSimple == bool: It's the top level structBuilder object and it has a simple value
+	isSimple bool
+
+	// if map_ != nil, write val to map_[key] when val is finalized, performed by Flush()
 	map_ *reflect.MapValue
 	key  reflect.Value
+
+	// if interface_ != nil, write val to interface_ when val is finalized. Performed by Flush()
+	interface_ *reflect.InterfaceValue
 }
 
-var nobuilder *structBuilder
-
-func isfloat(v reflect.Value) bool {
-	switch v.(type) {
-	case *reflect.FloatValue:
-		return true
+func NewStructBuilder(val reflect.Value) *structBuilder {
+	// Dereference pointers here so we don't have to handle this case everywhere else
+	if v, ok := val.(*reflect.PtrValue); ok {
+		if v.IsNil() {
+			v.PointTo(reflect.MakeZero(v.Type().(*reflect.PtrType).Elem()))
+		}
+		val = v.Elem()
 	}
-	return false
+	return &structBuilder{val: val}
 }
 
-func setfloat(v reflect.Value, f float64) {
-	switch v := v.(type) {
-	case *reflect.FloatValue:
-		v.Set(f)
+func MapValueBuilder(val reflect.Value, map_ *reflect.MapValue, key reflect.Value) *structBuilder {
+	if v, ok := val.(*reflect.PtrValue); ok {
+		if v.IsNil() {
+			v.PointTo(reflect.MakeZero(v.Type().(*reflect.PtrType).Elem()))
+		}
+		map_.SetElem(key, v)
+		val = v.Elem()
+		return &structBuilder{val: val}
+	}
+	return &structBuilder{val: val, map_: map_, key: key}
+}
+
+// Returns a valid unmarshalable structBuilder or an error
+func TopLevelBuilder(val interface{}) (sb *structBuilder, err os.Error) {
+	ival := reflect.NewValue(val)
+	v, ok := ival.(*reflect.PtrValue)
+	if !ok {
+		return nil, os.NewError(fmt.Sprintf("expecting pointer value, received %v", ival.Type()))
+	}
+	// We'll allow one level of indirection
+	switch actual := v.Elem().(type) {
+	case *reflect.FloatValue, *reflect.StringValue, *reflect.BoolValue,
+		*reflect.IntValue, *reflect.SliceValue, *reflect.ArrayValue:
+		sb := NewStructBuilder(actual)
+		sb.isSimple = true // Prepare to receive a simple value
+		return sb, nil
+	case *reflect.MapValue, *reflect.StructValue, *reflect.InterfaceValue:
+		sb := NewStructBuilder(actual)
+		sb.Object() // Allocate memory if necessary
+		return sb, nil
+	}
+	return nil, os.NewError(fmt.Sprintf("unrecognized type %v", ival.Type()))
+}
+
+// Flush handles the final update for map & interface objects.
+func (self *structBuilder) Flush() {
+	if self.interface_ != nil {
+		self.interface_.Set(self.val)
+	}
+	if self.map_ != nil {
+		if self.interface_ != nil {
+			self.map_.SetElem(self.key, self.interface_)
+		} else {
+			self.map_.SetElem(self.key, self.val)
+		}
 	}
 }
 
-func setint(v reflect.Value, i int64) {
-	switch v := v.(type) {
+// Defer update if it's an interface, handled by Flush().
+func (self *structBuilder) DeferSet(val reflect.Value) {
+	self.interface_ = self.val.(*reflect.InterfaceValue)
+	self.val = val
+}
+
+func (self *structBuilder) Int64(i int64) {
+	switch v := self.val.(type) {
 	case *reflect.IntValue:
 		v.Set(i)
 	case *reflect.UintValue:
 		v.Set(uint64(i))
-	}
-}
-
-// If updating self.val is not enough to update the original,
-// copy a changed self.val out to the original.
-func (self *structBuilder) Flush() {
-	if self == nil {
-		return
-	}
-	if self.map_ != nil {
-		self.map_.SetElem(self.key, self.val)
-	}
-}
-
-func (self *structBuilder) Int64(i int64) {
-	if self == nil {
-		return
-	}
-	v := self.val
-	if isfloat(v) {
-		setfloat(v, float64(i))
-	} else {
-		setint(v, i)
+	case *reflect.FloatValue:
+		v.Set(float64(i))
+	case *reflect.InterfaceValue:
+		self.DeferSet(reflect.NewValue(i))
+	default:
+		panic(NewBsonError("unable to convert int64 %v to %s", i, self.val.Type()))
 	}
 }
 
 func (self *structBuilder) Date(t *time.Time) {
-	if self == nil {
-		return
-	}
-	if v, ok := self.val.(*reflect.PtrValue); ok {
-		v.PointTo(reflect.Indirect(reflect.NewValue(t)))
+	switch v := self.val.(type) {
+	case *reflect.StructValue:
+		v.SetValue(reflect.NewValue(*t))
+	case *reflect.InterfaceValue:
+		self.DeferSet(reflect.NewValue(*t))
+	default:
+		panic(NewBsonError("unable to convert time %v to %s", *t, self.val.Type()))
 	}
 }
 
 func (self *structBuilder) Int32(i int32) {
-	if self == nil {
-		return
-	}
-	v := self.val
-	if isfloat(v) {
-		setfloat(v, float64(i))
-	} else {
-		setint(v, int64(i))
+	switch v := self.val.(type) {
+	case *reflect.IntValue:
+		v.Set(int64(i))
+	case *reflect.UintValue:
+		v.Set(uint64(uint32(i)))
+	case *reflect.FloatValue:
+		v.Set(float64(i))
+	case *reflect.InterfaceValue:
+		self.DeferSet(reflect.NewValue(i))
+	default:
+		panic(NewBsonError("unable to convert int32 %v to %s", i, self.val.Type()))
 	}
 }
 
 func (self *structBuilder) Float64(f float64) {
-	if self == nil {
-		return
-	}
-	v := self.val
-	if isfloat(v) {
-		setfloat(v, f)
-	} else {
-		setint(v, int64(f))
+	switch v := self.val.(type) {
+	case *reflect.IntValue:
+		v.Set(int64(f))
+	case *reflect.UintValue:
+		v.Set(uint64(f))
+	case *reflect.FloatValue:
+		v.Set(f)
+	case *reflect.InterfaceValue:
+		self.DeferSet(reflect.NewValue(f))
+	default:
+		panic(NewBsonError("unable to convert float64 %v to %s", f, self.val.Type()))
 	}
 }
 
 func (self *structBuilder) Null() {}
 
 func (self *structBuilder) String(s string) {
-	if self == nil {
-		return
-	}
-	if v, ok := self.val.(*reflect.StringValue); ok {
+	switch v := self.val.(type) {
+	case *reflect.StringValue:
 		v.Set(s)
+	case *reflect.InterfaceValue:
+		self.DeferSet(reflect.NewValue(s))
+	default:
+		panic(NewBsonError("unable to convert string %v to %s", s, self.val.Type()))
 	}
 }
 
 func (self *structBuilder) Regex(regex, options string) {
-	// Ignore options for now...
-	if self == nil {
-		return
-	}
-	if v, ok := self.val.(*reflect.StringValue); ok {
-		v.Set(regex)
-	}
+	// No special treatment
+	self.String(regex)
 }
 
 func (self *structBuilder) Bool(tf bool) {
-	if self == nil {
-		return
-	}
-	if v, ok := self.val.(*reflect.BoolValue); ok {
+	switch v := self.val.(type) {
+	case *reflect.BoolValue:
 		v.Set(tf)
+	case *reflect.InterfaceValue:
+		self.DeferSet(reflect.NewValue(tf))
+	default:
+		panic(NewBsonError("unable to convert bool %v to %s", tf, self.val.Type()))
 	}
 }
 
 func (self *structBuilder) OID(oid []byte) {
-	if self == nil {
-		return
-	}
-	if v, ok := self.val.(*reflect.SliceValue); ok {
-		if v.Cap() < 12 {
-			nv := reflect.MakeSlice(v.Type().(*reflect.SliceType), 12, 12)
-			v.Set(nv)
-		}
-		for i := 0; i < 12; i++ {
-			v.Elem(i).(*reflect.UintValue).Set(uint64(oid[i]))
-		}
-	}
+	self.Binary(oid)
 }
 
 func (self *structBuilder) Array() {
-	if self == nil {
-		return
-	}
-	if v, ok := self.val.(*reflect.SliceValue); ok {
+	switch v := self.val.(type) {
+	case *reflect.ArrayValue:
+		// no op
+	case *reflect.SliceValue:
 		if v.IsNil() {
 			v.Set(reflect.MakeSlice(v.Type().(*reflect.SliceType), 0, 8))
 		}
+	case *reflect.InterfaceValue:
+		self.DeferSet(reflect.NewValue(make([]interface{}, 0, 8)))
+	default:
+		panic(NewBsonError("unable to convert array to %s", self.val.Type()))
+	}
+}
+
+func (self *structBuilder) Binary(bindata []byte) {
+	switch v := self.val.(type) {
+	case *reflect.ArrayValue:
+		if v.Cap() < len(bindata) {
+			panic(NewBsonError("insufficient space in array. Have: %v, Need: %v", v.Cap(), len(bindata)))
+		}
+		for i := 0; i < len(bindata); i++ {
+			v.Elem(i).(*reflect.UintValue).Set(uint64(bindata[i]))
+		}
+	case *reflect.SliceValue:
+		if v.IsNil() {
+			// Just point it to the bindata object
+			v.SetValue(reflect.NewValue(bindata))
+			return
+		}
+		if v.Cap() < len(bindata) {
+			nv := reflect.MakeSlice(v.Type().(*reflect.SliceType), len(bindata), len(bindata))
+			v.Set(nv)
+		}
+		for i := 0; i < len(bindata); i++ {
+			v.Elem(i).(*reflect.UintValue).Set(uint64(bindata[i]))
+		}
+	case *reflect.InterfaceValue:
+		self.DeferSet(reflect.NewValue(bindata))
+	default:
+		panic(NewBsonError("unable to convert oid %v to %s", bindata, self.val.Type()))
 	}
 }
 
 func (self *structBuilder) Elem(i int) Builder {
-	if self == nil || i < 0 {
-		return nobuilder
+	if i < 0 {
+		panic(NewBsonError("negative index %v for array element", i))
 	}
 	switch v := self.val.(type) {
 	case *reflect.ArrayValue:
 		if i < v.Len() {
-			return &structBuilder{val: v.Elem(i)}
+			return NewStructBuilder(v.Elem(i))
+		} else {
+			panic(NewBsonError("array index %v out of bounds", i))
 		}
 	case *reflect.SliceValue:
 		if i > v.Cap() {
@@ -190,41 +272,38 @@ func (self *structBuilder) Elem(i int) Builder {
 			v.SetLen(i + 1)
 		}
 		if i < v.Len() {
-			return &structBuilder{val: v.Elem(i)}
+			return NewStructBuilder(v.Elem(i))
+		} else {
+			panic(NewBsonError("internal error, realloc failed?"))
 		}
 	}
-	return nobuilder
+	panic(NewBsonError("unexpected type %s, expecting slice or array", self.val.Type()))
 }
 
 func (self *structBuilder) Object() {
-	if self == nil {
-		return
-	}
-	if v, ok := self.val.(*reflect.PtrValue); ok && v.IsNil() {
+	switch v := self.val.(type) {
+	case *reflect.MapValue:
 		if v.IsNil() {
-			v.PointTo(reflect.MakeZero(v.Type().(*reflect.PtrType).Elem()))
-			self.Flush()
+			v.Set(reflect.MakeMap(v.Type().(*reflect.MapType)))
 		}
-		self.map_ = nil
-		self.val = v.Elem()
-	}
-	if v, ok := self.val.(*reflect.MapValue); ok && v.IsNil() {
-		v.Set(reflect.MakeMap(v.Type().(*reflect.MapType)))
+	case *reflect.StructValue:
+		// no op
+	case *reflect.InterfaceValue:
+		self.DeferSet(reflect.NewValue(make(map[string]interface{})))
+	default:
+		panic(NewBsonError("unexpected type %s, expecting composite type", self.val.Type()))
 	}
 }
 
 func (self *structBuilder) Key(k string) Builder {
-	if self == nil {
-		return nobuilder
-	}
-	switch v := reflect.Indirect(self.val).(type) {
+	switch v := self.val.(type) {
 	case *reflect.StructValue:
 		t := v.Type().(*reflect.StructType)
 		// Case-insensitive field lookup.
 		k = strings.ToLower(k)
 		for i := 0; i < t.NumField(); i++ {
 			if strings.ToLower(t.Field(i).Name) == k {
-				return &structBuilder{val: v.Field(i)}
+				return NewStructBuilder(v.Field(i))
 			}
 		}
 	case *reflect.MapValue:
@@ -238,34 +317,35 @@ func (self *structBuilder) Key(k string) Builder {
 			v.SetElem(key, reflect.MakeZero(t.Elem()))
 			elem = v.Elem(key)
 		}
-		return &structBuilder{val: elem, map_: v, key: key}
-	case *reflect.SliceValue:
+		return MapValueBuilder(elem, v, key)
+	case *reflect.SliceValue, *reflect.ArrayValue:
+		if self.isSimple {
+			self.isSimple = false
+			return self
+		}
 		index, err := strconv.Atoi(k)
 		if err != nil {
-			return nobuilder
+			println(err.String())
+			panic(bsonError{err.String()})
 		}
-		if index < v.Len() {
-			return &structBuilder{val: v.Elem(index)}
+		return self.Elem(index)
+	case *reflect.FloatValue, *reflect.StringValue, *reflect.BoolValue, *reflect.IntValue:
+		// Special case. We're unmarshaling into a simple type.
+		if self.isSimple {
+			self.isSimple = false
+			return self
 		}
-		if index < v.Cap() {
-			v.SetLen(index + 1)
-			return &structBuilder{val: v.Elem(index)}
-		}
-		newCap := v.Cap() * 2
-		if index >= newCap {
-			newCap = index*2 + 1
-		}
-		temp := reflect.MakeSlice(v.Type().(*reflect.SliceType), index+1, newCap)
-		reflect.Copy(temp, v)
-		v.Set(temp)
-		return &structBuilder{val: v.Elem(index)}
 	}
-	return nobuilder
+	panic(NewBsonError("%s not supported as a BSON document", self.val.Type()))
 }
 
 func Unmarshal(b []byte, val interface{}) (err os.Error) {
-	sb := &structBuilder{val: reflect.NewValue(val)}
+	sb, terr := TopLevelBuilder(val)
+	if terr != nil {
+		return terr
+	}
 	err = Parse(bytes.NewBuffer(b[4:len(b)]), sb)
+	sb.Flush()
 	return
 }
 
@@ -289,6 +369,8 @@ func Marshal(val interface{}) (BSON, os.Error) {
 		return &_Long{int64(v), _Null{}}, nil
 	case *time.Time:
 		return &_Date{v, _Null{}}, nil
+	case []byte:
+		return &_Binary{v, _Null{}}, nil
 	}
 
 	var value reflect.Value

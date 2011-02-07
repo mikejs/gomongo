@@ -1,4 +1,3 @@
-// Copyright 2009-2011 The gomongo Authors.  All rights reserved.
 // Use of this source code is governed by the 3-clause BSD License
 // that can be found in the LICENSE file.
 
@@ -23,10 +22,10 @@ type OtherStruct struct {
 }
 
 type ExampleStruct struct {
-	First  int32
+	Firs   int32
 	Second float64
-	Third  string
-	Fourth EmptyStruct
+	Thir   string
+	Fourt  EmptyStruct
 	Fifth  OtherStruct
 }
 
@@ -99,4 +98,103 @@ func TestMarshal(t *testing.T) {
 	es2 = new(ExampleStruct2)
 	Unmarshal(bs2.Bytes(), es2)
 	assertTrue(es2.Date.Seconds() == d.Seconds(), "date unmarshal", t)
+}
+
+func TestVariety(t *testing.T) {
+	in := map[string]string{"val": "test"}
+	encoded := VerifyMarshal2(t, in)
+	expected := []byte("\x13\x00\x00\x00\x02val\x00\x05\x00\x00\x00test\x00\x00")
+	compare(t, encoded, expected)
+
+	out := make(map[string]interface{})
+	err := Unmarshal(encoded, &out)
+	if in["val"] != out["val"] {
+		t.Errorf("unmarshal doesn't match input: %v\n%v\n%v\n", err, in, out)
+	}
+
+	var out1 string
+	err = Unmarshal(encoded, &out1)
+	if out1 != "test" {
+		t.Errorf("unmarshal doesn't match input: %v\n%v\n%v\n", err, in, out1)
+	}
+
+	var out2 interface{}
+	err = Unmarshal(encoded, &out2)
+	if out2.(map[string]interface{})["val"].(string) != "test" {
+		t.Errorf("unmarshal doesn't match input: %v\n%v\n%v\n", err, in, out1)
+	}
+
+	type mystruct struct {
+		Val string
+	}
+	var out3 mystruct
+	err = Unmarshal(encoded, &out3)
+	if out3.Val != "test" {
+		t.Errorf("unmarshal doesn't match input: %v\n%v\n%v\n", err, in, out1)
+	}
+}
+
+func TestBinary(t *testing.T) {
+	in := map[string][]byte{"val": []byte("test")}
+	encoded := VerifyMarshal2(t, in)
+	expected := []byte("\x13\x00\x00\x00\x05val\x00\x04\x00\x00\x00\x00test\x00")
+	compare(t, encoded, expected)
+
+	out := make(map[string]interface{})
+	err := Unmarshal(encoded, &out)
+	if string(out["val"].([]byte)) != "test" {
+		t.Errorf("unmarshal doesn't match input: %v\n%v\n%v\n", err, in, out)
+	}
+
+	var out1 []byte
+	err = Unmarshal(encoded, &out1)
+	if string(out1) != "test" {
+		t.Errorf("unmarshal doesn't match input: %v\n%v\n%v\n", err, in, out1)
+	}
+}
+
+func TestInt(t *testing.T) {
+	in := map[string]int{"val": 20}
+	encoded := VerifyMarshal2(t, in)
+	expected := []byte("\x12\x00\x00\x00\x12val\x00\x14\x00\x00\x00\x00\x00\x00\x00\x00")
+	compare(t, encoded, expected)
+
+	out := make(map[string]interface{})
+	err := Unmarshal(encoded, &out)
+	if out["val"].(int64) != 20 {
+		t.Errorf("unmarshal doesn't match input: %v\n%v\n%v\n", err, in, out)
+	}
+
+	var out1 int
+	err = Unmarshal(encoded, &out1)
+	if out1 != 20 {
+		t.Errorf("unmarshal doesn't match input: %v\n%v\n%vn", err, in, out1)
+	}
+}
+
+func VerifyMarshal2(t *testing.T, val interface{}) []byte {
+	bs, err := Marshal(val)
+	if err != nil {
+		t.Errorf("marshal error: %s\n", err)
+	}
+	expected := bs.Bytes()
+	encoded, err2 := Marshal2(val)
+	if err2 != nil {
+		t.Errorf("marshal2 error: %s\n", err2)
+	}
+	compare(t, encoded, expected)
+	return expected
+}
+
+func compare(t *testing.T, encoded []byte, expected []byte) {
+	if len(encoded) != len(expected) {
+		t.Errorf("encoding mismatch:\n%#v\n%#v\n", string(encoded), string(expected))
+	} else {
+		for i, _ := range encoded {
+			if encoded[i] != expected[i] {
+				t.Errorf("encoding mismatch:\n%#v\n%#v\n", string(encoded), string(expected))
+				break
+			}
+		}
+	}
 }

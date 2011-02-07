@@ -11,6 +11,7 @@ GOFILES=\
 	message.go\
 	bson.go\
 	bson-struct.go\
+	marshal2.go\
 
 include $(GOROOT)/src/Make.pkg
 

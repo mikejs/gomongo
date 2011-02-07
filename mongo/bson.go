@@ -9,8 +9,6 @@ package mongo
 
 import (
 	"os"
-	"io"
-	"io/ioutil"
 	"fmt"
 	"math"
 	"time"
@@ -185,6 +183,23 @@ func (self *_Array) Bytes() []byte {
 	return append(w32, buf.Bytes()...)
 }
 
+type _Binary struct {
+	value []byte
+	_Null
+}
+
+func (self *_Binary) Kind() int { return BinaryKind }
+func (self *_Binary) Bytes() []byte {
+	w32 := make([]byte, _WORD32)
+	pack.PutUint32(w32, uint32(len(self.value)))
+
+	buf := bytes.NewBuffer(w32)
+	buf.WriteByte(0)
+	buf.Write(self.value)
+
+	return buf.Bytes()
+}
+
 type _OID struct {
 	value []byte
 	_Null
@@ -331,6 +346,7 @@ type Builder interface {
 	Null()
 	Object()
 	Array()
+	Binary(bytes []byte)
 
 	// Create sub-Builders
 	Key(s string) Builder
@@ -377,6 +393,7 @@ func (self *_BSONBuilder) Float64(f float64) { self.Put(&_Number{f, _Null{}}) }
 func (self *_BSONBuilder) String(s string)   { self.Put(&_String{s, _Null{}}) }
 func (self *_BSONBuilder) Object()           { self.Put(&_Object{make(map[string]BSON), _Null{}}) }
 func (self *_BSONBuilder) Array()            { self.Put(&_Array{new(vector.Vector), _Null{}}) }
+func (self *_BSONBuilder) Binary(b []byte)   { self.Put(&_Binary{b, _Null{}}) }
 func (self *_BSONBuilder) Bool(b bool)       { self.Put(&_Boolean{b, _Null{}}) }
 func (self *_BSONBuilder) Date(t *time.Time) { self.Put(&_Date{t, _Null{}}) }
 func (self *_BSONBuilder) Null()             { self.Put(Null) }
@@ -437,6 +454,12 @@ func readCString(buf *bytes.Buffer) string {
 }
 
 func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
+	defer func() {
+		if x := recover(); x != nil {
+			err = x.(bsonError)
+		}
+	}()
+
 	kind, _ := buf.ReadByte()
 	err = nil
 
@@ -452,27 +475,28 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 
 		switch kind {
 		case NumberKind:
-			lr := io.LimitReader(buf, 8)
-			bits, _ := ioutil.ReadAll(lr)
-			ui64 := pack.Uint64(bits)
+			ui64 := pack.Uint64(buf.Next(8))
 			fl64 := math.Float64frombits(ui64)
 			b2.Float64(fl64)
 		case StringKind:
-			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 4))
-			l := pack.Uint32(bits)
-			s, _ := ioutil.ReadAll(io.LimitReader(buf, int64(l-1)))
+			l := int(pack.Uint32(buf.Next(4)))
+			s := buf.Next(l - 1)
 			buf.ReadByte()
 			b2.String(string(s))
 		case ObjectKind:
 			b2.Object()
-			ioutil.ReadAll(io.LimitReader(buf, 4))
+			buf.Next(4)
 			err = Parse(buf, b2)
 		case ArrayKind:
 			b2.Array()
-			ioutil.ReadAll(io.LimitReader(buf, 4))
+			buf.Next(4)
 			err = Parse(buf, b2)
+		case BinaryKind:
+			l := int(pack.Uint32(buf.Next(4)))
+			buf.Next(1) // Skip the subtype, we don't care
+			b2.Binary(buf.Next(l))
 		case OIDKind:
-			oid, _ := ioutil.ReadAll(io.LimitReader(buf, 12))
+			oid := buf.Next(12)
 			b2.OID(oid)
 		case BooleanKind:
 			b, _ := buf.ReadByte()
@@ -482,24 +506,22 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 				b2.Bool(false)
 			}
 		case DateKind:
-			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 8))
-			ui64 := pack.Uint64(bits)
+			ui64 := pack.Uint64(buf.Next(8))
 			b2.Date(time.SecondsToUTC(int64(ui64) / 1000))
 		case RegexKind:
 			regex := readCString(buf)
 			options := readCString(buf)
 			b2.Regex(regex, options)
 		case IntKind:
-			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 4))
-			ui32 := pack.Uint32(bits)
+			ui32 := pack.Uint32(buf.Next(4))
 			b2.Int32(int32(ui32))
 		case LongKind:
-			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 8))
-			ui64 := pack.Uint64(bits)
+			ui64 := pack.Uint64(buf.Next(8))
 			b2.Int64(int64(ui64))
 		default:
 			err = os.NewError(fmt.Sprintf("don't know how to handle kind %v yet", kind))
 		}
+		b2.Flush()
 
 		kind, _ = buf.ReadByte()
 	}

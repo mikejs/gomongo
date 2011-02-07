@@ -19,6 +19,9 @@ type SimpleContainer struct {
 	Val interface{}
 }
 
+// LenWriter records the current write postion on the buffer
+// and can later be used to recor the number of bytes written
+// in conformance to BSON spec
 type LenWriter struct {
 	buf        *bytes.Buffer
 	len_offset int
