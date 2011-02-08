@@ -22,11 +22,11 @@ type OtherStruct struct {
 }
 
 type ExampleStruct struct {
-	Firs   int32
-	Second float64
-	Thir   string
-	Fourt  EmptyStruct
-	Fifth  OtherStruct
+	First   int32
+	Second  float64
+	Third   string
+	Fourth  EmptyStruct
+	Fifth   OtherStruct
 }
 
 type ExampleWithId struct {
