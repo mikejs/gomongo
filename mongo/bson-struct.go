@@ -8,6 +8,7 @@
 package mongo
 
 import (
+	"io"
 	"reflect"
 	"strings"
 	"fmt"
@@ -325,7 +326,6 @@ func (self *structBuilder) Key(k string) Builder {
 		}
 		index, err := strconv.Atoi(k)
 		if err != nil {
-			println(err.String())
 			panic(bsonError{err.String()})
 		}
 		return self.Elem(index)
@@ -347,6 +347,32 @@ func Unmarshal(b []byte, val interface{}) (err os.Error) {
 	err = Parse(bytes.NewBuffer(b[4:len(b)]), sb)
 	sb.Flush()
 	return
+}
+
+func UnmarshalFromStream(reader io.Reader, val interface{}) (err os.Error) {
+	lenbuf := make([]byte, 4)
+	var n int
+	n, err = reader.Read(lenbuf)
+	if err != nil {
+		return err
+	}
+	if n != 4 {
+		return io.ErrUnexpectedEOF
+	}
+	length := pack.Uint32(lenbuf)
+	buf := make([]byte, length)
+	pack.PutUint32(buf, length)
+	n, err = reader.Read(buf[4:])
+	if err != nil {
+		if err == os.EOF {
+			return io.ErrUnexpectedEOF
+		}
+		return err
+	}
+	if n != int(length-4) {
+		return io.ErrUnexpectedEOF
+	}
+	return Unmarshal(buf, val)
 }
 
 func Marshal(val interface{}) (BSON, os.Error) {

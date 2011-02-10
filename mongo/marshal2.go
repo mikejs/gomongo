@@ -6,6 +6,7 @@
 package mongo
 
 import (
+	"io"
 	"os"
 	"math"
 	"reflect"
@@ -37,8 +38,18 @@ func NewLenWriter(buf *bytes.Buffer) *LenWriter {
 func (self *LenWriter) RecordLen() {
 	buf := self.buf.Bytes()
 	final_len := len(buf)
-	w32 := buf[self.len_offset:self.len_offset+_WORD32]
+	w32 := buf[self.len_offset : self.len_offset+_WORD32]
 	pack.PutUint32(w32, uint32(final_len-self.len_offset))
+}
+
+func MarshalToStream(writer io.Writer, val interface{}) (err os.Error) {
+	var encoded []byte
+	encoded, err = Marshal2(val)
+	if err != nil {
+		return err
+	}
+	_, err = writer.Write(encoded)
+	return err
 }
 
 func Marshal2(val interface{}) (encoded []byte, err os.Error) {
@@ -58,18 +69,19 @@ func Marshal2(val interface{}) (encoded []byte, err os.Error) {
 		val = v.Elem().Interface()
 	}
 
-	// Wrap simple types in a container
-	switch v:= val.(type) {
-	case float64, string, bool, int32, int64, int, time.Time, []byte:
-		val = SimpleContainer{v}
-	}
-
 	buf := bytes.NewBuffer(make([]byte, 0, 32))
 	switch fv := reflect.NewValue(val).(type) {
+	case *reflect.FloatValue, *reflect.StringValue, *reflect.BoolValue,
+		*reflect.IntValue, *reflect.UintValue, *reflect.SliceValue, *reflect.ArrayValue:
+		// Wrap simple types in a container
+		val = SimpleContainer{fv.Interface()}
+		EncodeStruct(buf, reflect.NewValue(val).(*reflect.StructValue))
 	case *reflect.StructValue:
 		EncodeStruct(buf, fv)
 	case *reflect.MapValue:
 		EncodeMap(buf, fv)
+	default:
+		panic(NewBsonError("Unexpected type %v\n", fv.Type()))
 	}
 	return buf.Bytes(), err
 }
@@ -82,24 +94,6 @@ func EncodeField(buf *bytes.Buffer, key string, val interface{}) {
 		key = "_id"
 	}
 	switch v := val.(type) {
-	case float64:
-		EncodePrefix(buf, '\x01', key)
-		EncodeFloat64(buf, v)
-	case string:
-		EncodePrefix(buf, '\x02', key)
-		EncodeString(buf, v)
-	case bool:
-		EncodePrefix(buf, '\x08', key)
-		EncodeBool(buf, v)
-	case int32:
-		EncodePrefix(buf, '\x10', key)
-		EncodeInt32(buf, v)
-	case int64:
-		EncodePrefix(buf, '\x12', key)
-		EncodeInt64(buf, v)
-	case int:
-		EncodePrefix(buf, '\x12', key)
-		EncodeInt64(buf, int64(v))
 	case time.Time:
 		EncodePrefix(buf, '\x11', key)
 		EncodeTime(buf, v)
@@ -113,6 +107,21 @@ func EncodeField(buf *bytes.Buffer, key string, val interface{}) {
 
 CompositeType:
 	switch fv := reflect.NewValue(val).(type) {
+	case *reflect.FloatValue:
+		EncodePrefix(buf, '\x01', key)
+		EncodeFloat64(buf, fv.Get())
+	case *reflect.StringValue:
+		EncodePrefix(buf, '\x02', key)
+		EncodeString(buf, fv.Get())
+	case *reflect.BoolValue:
+		EncodePrefix(buf, '\x08', key)
+		EncodeBool(buf, fv.Get())
+	case *reflect.IntValue:
+		EncodePrefix(buf, '\x12', key)
+		EncodeUint64(buf, uint64(fv.Get()))
+	case *reflect.UintValue:
+		EncodePrefix(buf, '\x12', key)
+		EncodeUint64(buf, fv.Get())
 	case *reflect.StructValue:
 		EncodePrefix(buf, '\x03', key)
 		EncodeStruct(buf, fv)
@@ -158,15 +167,9 @@ func EncodeBool(buf *bytes.Buffer, val bool) {
 	}
 }
 
-func EncodeInt32(buf *bytes.Buffer, val int32) {
-	w32 := make([]byte, _WORD32)
-	pack.PutUint32(w32, uint32(val))
-	buf.Write(w32)
-}
-
-func EncodeInt64(buf *bytes.Buffer, val int64) {
+func EncodeUint64(buf *bytes.Buffer, val uint64) {
 	w64 := make([]byte, _WORD64)
-	pack.PutUint64(w64, uint64(val))
+	pack.PutUint64(w64, val)
 	buf.Write(w64)
 }
 
