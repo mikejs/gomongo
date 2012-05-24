@@ -1,9 +1,8 @@
 include $(GOROOT)/src/Make.inc
 
-TARG=github.com/mikejs/gomongo/mongo
+TARG=mongo
 GOFILES=\
 	main.go\
-\
 	connection.go\
 	database.go\
 	collection.go\
